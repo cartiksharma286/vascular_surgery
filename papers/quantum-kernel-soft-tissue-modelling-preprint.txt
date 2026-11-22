@@ -1,0 +1,1275 @@
+N AT U R E - S T Y L E P R E P R I N T | N O T P E E R R E V I E W E D | E X P E R I M E N TA L
+
+
+Quantum kernel scoring coupled to finite
+hyperelastic soft-tissue modelling for vascular
+surgery
+A finite-mathematics framework joining an exactly emulated six-qubit angle-encoding kernel
+to incompressible Neo-Hookean and Mooney-Rivlin inflation of arterial wall
+Independent preprint  Version 1.2  22 November 2026 (adds Section 11 and Appendix D; Section 10 added in v1.1)
+Synthetic data only  No patient data  Quantum kernel classically emulated  No quantum advantage claimed
+
+   Abstract. Vascular planning needs two different kinds of finite descriptor: a similarity score that places a
+   case relative to lower- and higher-risk archetypes, and a mechanical prediction of how a vessel wall inflates
+   under pressure. This preprint formalises both, in closed form, and couples them only at the level of a shared
+   case record. The similarity score is a six-qubit angle-encoding quantum kernel, k(x,x')=j=16cos2[(j-j')/2]
+   with j=(/2)fj, evaluated exactly by classical emulation on six synthetic archetypes. The mechanical model
+   is finite hyperelastic inflation at fixed axial stretch: incompressibility gives r=_-1, Mooney-Rivlin strain
+   energy gives a closed-form hoop stress, and the thin-wall Laplace law gives pressure as P=(H/R) _-2_.
+   For a healthy-carotid preset the Neo-Hookean limit reproduces the operating diameters used in the
+   companion application, 6.47 mm at 80 mmHg and 6.79 mm at 120 mmHg from a 6.0 mm unloaded diameter.
+   Across five tissue presets, systolic wall stress is highest for the AAA wall preset (260 kPa, driven by radius,
+   not stiffness alone), while stiff/calcified and synthetic-graft presets show the smallest pulsatile strain (0.77%
+   and 0.99%). The kernel separates the diffuse-severe archetype (krm high=0.973) from the low-burden
+   archetype (krm low=0.995), but a classical RBF kernel makes the same calls on every archetype, so no
+   quantum advantage is claimed. Version 1.1 adds a Thomas-solved finite element model of intraoperative
+   expansion and a catheter design sweep (Section 10): balloon lumen 1.20 to 6.00 mm at 629 kPa peak stress;
+   oversized stent 6.50 mm at 659 kPa. Version 1.2 adds a health-economics scenario model (Section 11) with a
+   ridge / gradient-boosting cross-check: in the scale scenario, Year 3 revenue reaches USD 108.09M, above USD
+   100M (conservative: USD 59.63M) - a scenario, not a forecast. All results are synthetic, experimental and not
+   for clinical decisions.
+
+Keywords: quantum kernel; angle encoding; hyperelasticity; Mooney-Rivlin; Neo-Hookean; vascular surgery; soft tissue; finite
+mathematics; finite element method; catheter design; health economics; machine learning
+
+
+1 Two finite descriptors, one case record
+A vascular case is routinely summarised twice. Clinicians ask how similar it is to cases that did well or
+badly, and engineers ask how its wall will deform when pressurised. Those questions are usually answered
+by unrelated software. The companion vascular-surgery application that motivated this work places them
+side by side: a quantum machine learning (QML) Lab that scores cases against risk prototypes, and a
+Simulation tab that inflates a soft-tissue model and reports its characteristics. This preprint is the
+mathematical record of those two modules.
+The coupling proposed here is deliberately weak. The kernel consumes a normalised clinical feature vector
+f[0,1]6; the tissue model consumes a geometry and a pair of material constants. They share an identifier
+and a workflow state, not a fitted joint distribution, and no claim is made that either predicts the other.
+Every number in the application can be regenerated from the equations below and the code in the
+appendices, with no hidden training set and no patient data.
+Section 2 derives the kernel, Section 3 the inflation law, and Section 4 the coupled descriptor. Sections 5-6
+report the experiments; Sections 7-9 discuss limits and methods; Section 10 (Version 1.1) adds a finite
+element model of intraoperative device expansion and derives catheter design implications from it.
+Section 11 (Version 1.2) adds a health-economics model with a machine-learning cross-check over three
+years.
+
+  Scope statement. This independent, not-peer-reviewed preprint is not affiliated with any hospital, device company
+  or quantum hardware provider. Every case, preset and number is synthetic or a labelled assumption. The kernel is
+  emulated exactly on a classical computer; no quantum hardware was used and no quantum advantage is claimed.
+                                                                                                                          1
+
+2 The finite quantum kernel
+
+2.1 Six features, six qubits
+Each case is reduced to six normalised features, in a fixed order: stenosis fraction, normalised age,
+normalised lesion length, diabetes (0 or 1), smoking (0 or 1) and a normalised comorbidity burden.
+Normalisation is part of the model definition, not a preprocessing detail: stenosis is divided by 100%, age
+by 100 years, and lesion length by 100 mm, each clipped to [0,1]. Write the result as f=(f1,...,f6)[0,1]6.
+
+Angle encoding maps each feature to one qubit rotation. The scale /2, rather than , is essential: with a
+full  scale, two cases differing in a single binary feature would be exactly orthogonal, and the kernel
+would collapse to zero for almost every clinically distinct pair.
+
+
+               j = (/2) fj, |(f) = j=16 RY(j) |0 = j=16 [ cos(j/2)|0 + sin(j/2)|1 ]
+                                                                                                             (1)
+
+
+2.2 Closed-form fidelity kernel
+Because the encoding is a product state with no entangling gates, the fidelity kernel factorises exactly. No
+approximation, sampling or shot noise enters the numbers reported here.
+
+
+                 k(f, f) = |(f)|(f)|2 = j=16 cos2((j  j)/2) = j=16 cos2((fj  fj)/4)
+                                                                                                             (2)
+
+
+Each factor lies in [cos2(/4),1]=[0.5,1] for features in [0,1], so the kernel lies in [2-6,1] and never vanishes
+on the feature cube. That floor is a direct consequence of the /2 encoding scale in equation (1), and it is
+why the moderate archetype in Table 3 retains a readable similarity to both prototypes instead of
+collapsing to numerical zero.
+
+2.3 Prototypes, score and finite Gram matrix
+Scoring is prototype-based, following the application. Two fixed archetypes anchor the scale: a lower-risk
+prototype pL=(0.15,0.30,0.20,0,0,0.20) and a higher-risk prototype pH=(0.85,0.75,0.80,1,1,0.80). The signed
+score and its label are
+
+
+                  s(f) = k(f, pH)  k(f, pL), label(f) = higher if s(f) > 0, otherwise lower
+                                                                                                             (3)
+
+
+For any finite case set {f(1),...,f(n)} the Gram matrix Kab=k(f(a),f(b)) is positive semidefinite by construction,
+because it is a Gram matrix of state vectors. For the six archetypes of Section 6 the computed eigenvalues
+are 0.100, 0.275, 0.458, 0.765, 1.565 and 2.838, all strictly positive, which the code in Appendix A verifies
+rather than assumes.
+
+                         K  0, min(K) = 0.100 > 0 (n = 6 synthetic archetypes)
+                                                                                                             (4)
+
+
+
+
+                                                                                                               2
+
+2.4 Classical comparator
+Every kernel result is reported beside a classical Gaussian (radial basis function, RBF) kernel on the same
+normalised features, so that any apparent separation can be checked against a standard baseline.
+
+
+                                   kRBF(f, f) = exp(  f  f2 ),  = 2
+                                                                                                          (5)
+
+
+The comparator matters more than the kernel. On the synthetic archetypes below, the two kernels agree on
+the label of every case. That agreement is reported as a result, not hidden as an inconvenience: on six
+product-encoded features there is no separation, classical or quantum, that the other does not also find.
+
+2.5 What entanglement would - and would not - change
+Adding entangling gates or a second encoding layer (data re-uploading) would break the factorisation in
+equation (2) and require either hardware or statevector simulation. It would not, by itself, create a clinical
+signal where the features carry none. The product encoding is therefore kept, precisely because its kernel
+is exact, auditable and honest about its limits.
+
+
+
+
+                                                                                                            3
+
+3 Finite hyperelastic soft-tissue model
+
+3.1 Kinematics of inflation
+The vessel is a circular cylinder inflated at fixed length. Let R and H be the unloaded inner radius and wall
+thickness, r and h their pressurised values, and   =r/R=D/D0 the circumferential stretch, where D0 is
+the unloaded diameter. Axial stretch is fixed and incompressibility closes the system.
+
+
+                              z = 1, r  z = 1  r = 1, h = H/, r = R
+                                                                                                            (6)
+
+
+
+                              I1 = 2 + 1 + 2, I2 = 2 + 1 + 2 = I1 (z = 1)
+                                                                                                            (7)
+
+
+The equality I1=I2 is special to this kinematics and simplifies the Mooney-Rivlin stress below; it does not
+hold for general biaxial loading, and the model must not be quoted as if it did.
+
+3.2 Strain energy: Neo-Hookean and Mooney-Rivlin
+
+                 WNH = (/2)(I1  3), WMR = C10(I1  3) + C01(I2  3),  = 2(C10 + C01)
+                                                                                                            (8)
+
+
+Write the Mooney-Rivlin ratio as =C01/(C10+C01)[0,1], so C10=(1-)/2 and C01=/2. The Neo-Hookean
+law is the limit 0. A linear-elastic law, offered in the application for comparison, is the small-strain limit
+of the same equations and is not used for any headline number here, because pulsatile strains reach 35%
+in the softest preset considered in early tests - far outside its range.
+
+3.3 Hoop stress and the Laplace inflation law
+For an incompressible isotropic material the hoop-minus-radial Cauchy stress difference follows from W.
+Setting the radial stress to zero in the thin-wall approximation gives the hoop stress, and Laplace's law
+converts it to pressure.
+
+
+                                      =  [ (1  ) + 2 ] ( 2  2 )
+                                                                                                            (9)
+
+
+
+                                P =  h/r = (H/R) 2 , T = P r,  = T/h
+                                                                                                           (10)
+
+
+In the Neo-Hookean limit equation (10) collapses to a one-line inflation curve, which is the model's basic
+sanity check.
+
+
+                              PNH =  (H/R) ( 1  4 ),  = ( 1  PR/(H) )1/4
+                                                                                                           (11)
+
+
+Check. For the healthy-carotid geometry (D0=6.0 mm, H=0.60 mm) with =204 kPa, equation (11) gives
+=1.079 at 80 mmHg, hence D=6.47 mm, and =1.132 at 120 mmHg, hence D=6.79 mm. These are the
+operating diameters the companion application reports, so the finite model and the application agree in
+the limit where both can be checked by hand. The Mooney-Rivlin values in Table 2 differ slightly (6.49 mm
+and 6.87 mm), as they should once =0.25 softens the large-stretch response.
+
+
+
+
+                                                                                                              4
+
+3.4 Characteristics reported by the simulation
+Let Dd and Ds be the diameters at diastolic pressure Pd=80 mmHg and systolic pressure Ps=120 mmHg,
+with  P=Ps-Pd=40 mmHg and pulsatile strain =(Ds-Dd)/Dd. The application reports six characteristics, all
+finite differences of the inflation curve - none requires a derivative that the discrete model does not
+possess.
+
+                            Compliance C = (Ds  Dd)/P, Distensibility = /P
+                                                                                                           (12)
+
+
+
+                          Peterson modulus Ep = P/, Stiffness  = ln(Ps/Pd)/
+                                                                                                           (13)
+
+
+
+                    Systolic wall stress s = Ps rs/hs, Tension Ts = Ps rs, Ws = W(s)
+                                                                                                           (14)
+
+
+Equations (12)-(14) explain the pattern in Table 2 before it is seen: Ep and  blow up as 0, so a stiff vessel
+is identified by its moduli, whereas the AAA preset is identified by tension and stress, which scale with
+radius through equation (10) even when its strain is unremarkable.
+
+4 Coupled descriptor and finite workflow
+The coupled record for one case is the finite tuple
+
+
+                         D = ( s(f), k(f, pL), k(f, pH), d, s, , C, Ep, , s, Ts, Ws )
+                                                                                                           (15)
+
+
+It sits inside the application's finite eight-state surgical workflow - Referred, Imaging, Planning, Consent,
+Scheduled, In OR, Recovery, Follow-up - in which a case occupies exactly one state at a time and the
+descriptor D is recomputed, not carried, when features or tissue parameters change. No transition
+probabilities are fitted in this preprint; the workflow is a bookkeeping device that guarantees each
+descriptor belongs to a named case at a named stage, including the imaging (PACS) stage at which
+diameter, stenosis and lesion length are measured.
+That separation is the framework's main methodological point. Kernel inputs come from imaging and
+history; tissue inputs come from geometry and assumed material constants. Keeping their provenance
+separate in D prevents a common error in coupled models, in which a material assumption silently re-
+enters as if it were a measured clinical feature.
+
+
+
+
+                                                                                                              5
+
+5 Experiments: design
+Tissue presets. Five labelled presets span the application's range: healthy carotid, AAA wall, stiff/calcified,
+vein graft and synthetic graft (Table 1). Each is a point in (D0,H,,) space, not a measurement of a named
+patient's tissue. Pressures run from 20 to 160 mmHg for curves, with characteristics read at 80 and 120
+mmHg.
+Kernel archetypes. Six synthetic feature vectors, A to F, span low burden to diffuse severe disease (Table
+3). They are archetypes constructed to test the scoring, not sampled patients, and no outcome is attached to
+any of them.
+Computation. All values were computed deterministically in Python from equations (1)-(14) by bisection
+on the monotone pressure-stretch curve (80 iterations, bracket [1,3]), and are regenerated by Appendix A.
+Figures are plotted from the same computed arrays, not drawn separately.
+Table 1 | Tissue preset parameters. Synthetic modelling assumptions, not measured tissue properties.
+
+Preset                                    D0 (mm)            H (mm)             mu (kPa)          alpha        H/R
+
+Healthy carotid                                6.0              0.60                  204              0.25   0.200
+
+AAA wall                                      42.0              1.80                  420              0.30   0.086
+
+Stiff / calcified                              5.5              0.80                  650              0.20   0.291
+
+Vein graft                                     4.0              0.40                  180              0.25   0.200
+
+Synthetic graft                                6.0              0.50                  900              0.10   0.167
+
+
+
+
+                                                                                                                  6
+
+6 Results
+
+6.1 Mechanics: radius, not stiffness alone, drives wall stress
+Table 2 | Computed characteristics at 80 / 120 mmHg (Mooney-Rivlin). All values synthetic and deterministic.
+
+                      D80          D120      Strain            C              Ep                 sigmas          Ts          Ws
+Preset                                                                               beta
+                     (mm)         (mm)          (%)    (mm/mmHg)          (mmHg)                   (kPa)     (N/m)      (kJ/m3)
+
+Healthy
+                       6.49         6.87       5.72           0.0093           699   7.09            105       54.9        7.46
+carotid
+
+AAA wall              46.12       49.59        7.53           0.0868           531   5.38            260     396.7        23.41
+
+Stiff / calcified      5.58         5.62       0.77           0.0011         5,173 52.43              58       45.0        0.65
+
+Vein graft             4.39         4.70       7.22           0.0079           554   5.61            111       37.6        9.56
+
+Synthetic graft        6.11         6.17       0.99           0.0015         4,040 40.95             102       49.4        1.45
+
+The AAA preset has only the second-largest shear modulus, yet by far the largest systolic tension (396.7
+N/m, about seven times the healthy carotid value) and wall stress (260 kPa). Equation (10) predicts exactly
+this: tension is P r, so a sevenfold radius outweighs a twofold modulus. Conversely, the stiff/calcified preset
+- the largest modulus among the native tissues - has the lowest systolic stress (58 kPa), because it barely
+stretches and its radius is small, while its Peterson modulus (5,173 mmHg) and stiffness  (52.4) are an
+order of magnitude above the healthy values. Stress and stiffness are therefore not interchangeable
+descriptors, and any risk narrative that conflates them will misrank these presets.
+
+
+
+
+Figure 1 | Finite hyperelastic response. a, Mooney-Rivlin hoop stress (equation 9) against circumferential stretch. b, Laplace
+pressure-stretch curve (equation 10) with diastolic (D, 80 mmHg) and systolic (S, 120 mmHg) operating lines. The synthetic graft
+and stiff/calcified curves are the flattest in panel b, matching their low pulsatile strains in Table 2. Curves are computed, not
+measured.
+
+The synthetic single-heartbeat trace (Figure 2b) is the same inflation law evaluated along a raised-cosine
+pressure cycle between 80 and 120 mmHg. It is a kinematic replay of Table 2, not a dynamic simulation:
+inertia, viscoelasticity and wave reflection are absent, and the trace must not be read as a measured pulse
+waveform.
+
+
+
+
+                                                                                                                               7
+
+6.2 Kernel: clean separation on archetypes, no quantum advantage
+Table 3 | Quantum kernel similarities to prototypes for six synthetic archetypes. Features are (stenosis, age, lesion,
+diabetes, smoking, comorbidity), each in [0,1].
+
+Archetype                                        Features      k to lower     k to higher     Score s      Label      RBF label
+
+A - low burden                  0.20, 0.35, 0.25, 0, 0, 0.20       0.995             0.113      -0.883     Lower          Lower
+
+B - moderate                    0.45, 0.55, 0.40, 0, 1, 0.40       0.433             0.361      -0.072     Lower          Lower
+
+C - high burden                 0.80, 0.70, 0.75, 1, 1, 0.60       0.128             0.971     +0.843     Higher         Higher
+
+D - older, diabetic             0.65, 0.85, 0.55, 1, 0, 0.80       0.259             0.466     +0.207     Higher         Higher
+
+E - focal severe                0.90, 0.45, 0.30, 0, 0, 0.20       0.678             0.160      -0.518     Lower          Lower
+
+F - diffuse severe              0.85, 0.80, 0.85, 1, 1, 1.00       0.077             0.973     +0.895     Higher         Higher
+
+Three archetypes sit near a prototype (A, C and F, with a dominant similarity above 0.97) and three sit
+between them. Archetype E is the instructive case: its stenosis is the most severe in the set (0.90), yet it is
+scored lower-risk overall because every other feature is low. That is the prototype logic working as defined
+- overall similarity, not worst-feature triage - and it is also a warning. A service that wanted stenosis alone
+to dominate would need different prototypes or feature weights; the kernel will not supply that judgement
+by itself.
+Archetype B is the closest call (score -0.072), driven by smoking as its sole binary risk factor. Its RBF
+similarities (0.085 to lower, 0.048 to higher) make the same call with a much smaller margin in absolute
+terms, illustrating that kernel values are not comparable across kernel families even when kernel labels
+agree.
+
+
+
+
+Figure 2 | Kernel scoring and heartbeat replay. a, Quantum kernel similarity of archetypes A-F to the lower- and higher-risk
+prototypes (Table 3). b, Synthetic single heartbeat: normalised diameter D/D0 for the healthy carotid and AAA wall presets along
+an 80-120 mmHg raised-cosine pressure cycle. Panel b is a kinematic replay of the static inflation law, not a dynamic or measured
+waveform.
+
+Headline comparison. Quantum and RBF labels agree on 6 of 6 archetypes. With no disagreement, there
+is nothing on which a quantum advantage could rest, and none is claimed. The value of the quantum
+formulation here is its exact finite form and its direct implementation in the application, not superior
+separation.
+
+
+
+
+                                                                                                                               8
+
+7 Discussion
+The framework's contribution is auditability. Equation (2) can be checked on a pocket calculator for a
+single feature; equation (11) can be checked for a whole vessel. Between those two checks, every number
+in the companion application - a kernel score in the QML Lab, a diameter in the Simulation tab, a
+characteristic in its grid - traces to a stated equation, a stated preset and code that regenerates it. For
+experimental surgical software, that traceability is worth more than a marginal gain in separation on
+synthetic data.
+The mechanical results argue for reporting stress and stiffness separately in any coupled record, as
+equation (15) does. The AAA preset would be missed by a stiffness-only screen (its  is the lowest in Table
+2) and the calcified preset would be missed by a stress-only screen (its stress is the lowest). Together, s, Ts,
+Ep and  cover both failure intuitions: a wall that is loaded too heavily, and a wall that can no longer move.
+
+The kernel results argue for equal restraint. Prototype scoring is transparent - Table 3 can be read as a
+definition, not just a result - but transparency is not validity. No archetype carries an outcome, so
+sensitivity, specificity and calibration are undefined here, and any future version that attaches the score to
+real outcomes would need a governed dataset, a pre-registered analysis and clinical oversight that this
+preprint does not have.
+
+8 Limitations
+  Synthetic only. Cases, archetypes and tissue presets are constructed examples. No patient data,
+  measured tissue data or clinical outcomes were used.
+  Classical emulation. The quantum kernel is evaluated exactly in classical arithmetic. No quantum
+  hardware, sampling or noise model is involved, and no quantum advantage is claimed.
+  Thin-wall, isotropic, static tissue model. Residual stress, anisotropy (for example a Holzapfel-Gasser-
+  Ogden fibre model), viscoelasticity, axial prestretch, perivascular support and damage are omitted. The
+  AAA geometry in particular is reduced to an equivalent cylinder, which captures the Laplace radius
+  effect and nothing about local curvature or thrombus.
+  Fixed operating pressures. Characteristics use 80 and 120 mmHg for every preset, for comparability.
+  Patient-specific pressures would change every value in Table 2.
+  Unweighted features. All six kernel features enter with equal weight through the product in equation
+  (2). Clinical weighting is a judgement the framework deliberately does not encode.
+  Not for clinical decisions. Nothing here is a device, a validated predictor or a recommendation about
+  any patient or procedure.
+
+9 Methods
+Kernel evaluation. Angles were formed as j=(/2)fj and the kernel evaluated as the product in equation
+(2) in double precision. Gram eigenvalues were obtained by symmetric eigendecomposition. The RBF
+comparator used =2 on the same normalised features.
+Inflation solve. For each preset and target pressure, stretch was found by 80 bisection iterations on
+equation (10) over [1,3]. Pressures were converted at 1 mmHg = 0.133322 kPa. Characteristics were then
+evaluated from equations (12)-(14) at the solved diastolic and systolic stretches.
+Reproducibility. Appendix A is the generator for Tables 1-3 and Figures 1-2, in condensed form; Appendix
+B gives the equivalent kernel in JavaScript, as used in the application. Running either reproduces the
+kernel table exactly; running Appendix A reproduces the tissue table to the rounding shown.
+
+
+
+
+                                                                                                               9
+
+10 Finite element simulation of minimally invasive intraoperative expansion
+Added in Version 1.1. The soft-tissue model of Section 3 is a single-ring inflation law: it predicts how one
+representative cross-section inflates, but it cannot express a focal lesion, a device of finite length, or a limit
+on how far the wall may be pushed - the three features that define a minimally invasive intraoperative
+expansion, in which a balloon catheter or stent is delivered through the stenotic segment and opened
+inside it. This section discretises the same material law longitudinally, so those features become
+representable, while keeping every constant from Sections 3 and 5: the healthy-carotid material (mu = 204
+kPa, alpha = 0.25, H = 0.60 mm) is the wall, and plaque enters only as a stiffening factor and a yield
+threshold, both stated below. Section 10.6 then reads the computed cases backwards, as design
+implications for the devices themselves.
+
+10.1 Mesh, lesion profile and governing system
+The vessel segment is 60 mm long and is divided into N = 16 ring elements of length Le = 3.75 mm, giving
+17 nodes and, with the two end nodes fixed, 15 free radial degrees of freedom. The unknown is the nodal
+radial displacement vector u. The reference (diseased, unloaded) lumen carries a focal Gaussian lesion
+centred at zc = 30 mm,
+
+
+   Dref(z) = Dnom - (Dnom - Dmin) exp( -(z - zc)2 / (2 sigmag2) ), Dnom = 6.0 mm, Dmin = 1.20 mm,
+                                              sigmag = 1.55 mm
+                                                                                                            (16a)
+
+
+so the minimum reference lumen is 1.20 mm at the lesion centre and the profile has returned to within 0.3
+mm of nominal one element either side of the centre node - a focal lesion, not a diffuse narrowing. Each
+element e takes the mean of its two nodal reference diameters, Deref, and its own material constants.
+Equilibrium of the discretised segment is the linear system
+
+            K u = F, K tridiagonal, u = nodal radial displacements, F = device load vector
+                                                                                                             (16)
+
+
+which is solved exactly, in the finite sense used throughout this preprint, by the Thomas algorithm for
+tridiagonal systems [9,10]: one forward elimination sweep and one back-substitution, with no iteration
+error beyond floating-point rounding.
+
+10.2 Element tangent stiffness
+Element stretch is measured from the element-mean displacement, lambdae = (Deref + ui + ui+1) / Deref,
+where i and i+1 are the element's nodes. The element tangent stiffness is the derivative of the Mooney-
+Rivlin hoop stress of equation (9), converted from a stretch tangent to a displacement tangent by the
+element radius, since the hoop resultant sigmatheta h Le changes with displacement through d lambda =
+du / r:
+
+
+    ke = (d sigmatheta / d lambda)e  (he / re)  Le, d sigmatheta/d lambda = mue [ -2 alpha lambda-
+            3(lambda2 - lambda-2) + ((1 - alpha) + alpha lambda-2)(2 lambda + 2 lambda-3) ]
+                                                                                                             (17)
+
+
+Assembling the element stiffnesses into the two nodes each element touches produces the tridiagonal K of
+equation (16): each free diagonal entry collects the two adjacent elements, and each off-diagonal entry is
+the shared element's stiffness. No other coupling is present - there is no bending stiffness and no axial
+stress resultant, a limitation Section 10.7 states plainly.
+
+
+
+
+                                                                                                               10
+
+10.3 Device load and contact cap
+A device of nominal diameter Ddev and length Ldev, centred on the lesion, loads every node inside its
+footprint with the pressure resultant on that node's tributary area. The device may not push any node past
+its nominal diameter, which enters as a displacement cap applied by an active-set pass: nodes whose
+unconstrained displacement exceeds the cap are held at the cap, the remaining system is re-solved, and
+held nodes are counted as contact nodes.
+
+
+                   Fi = Pdev Le Ddev (loaded nodes), ui  (Ddev - Diref) / 2 (contact cap)
+                                                                                                                    (18)
+
+
+The total device force reported in Tables 4 and 5 is the pressure resultant over the reference inner surface
+of the elements the device spans, Ftot = sume Pdev pi Deref Le. A balloon and a stent differ in this model
+only through (Pdev, Ddev, Ldev): the balloon case uses a higher pressure at the nominal vessel diameter
+over a short footprint; the stent case uses a lower deployment pressure, a longer footprint, and a nominal
+diameter oversized by 0.5 mm relative to the vessel, as is standard sizing practice. No stent strut geometry
+is represented.
+
+10.4 Plaque stiffening and yield softening
+Plaque is represented in two places. First, each element's shear modulus is stiffened in proportion to its
+local stenosis fraction se = 1 - Deref/Dnom, with stiffening factor phi = 2.5 at full stenosis. Second, when an
+element's elastic hoop stress exceeds the yield stress sigmay = 600 kPa, the element is treated as yielded: its
+stress follows the softened line below and its tangent modulus is reduced to a fraction 0.216 of its tangent
+at yield for the next solver pass.
+
+  mue = mu [ 1 + (phi - 1) se ], sigmae = sigmay + 0.216  sigma'(lambday) (lambdae - lambday) for
+                                            yielded elements
+                                                                                                                    (19)
+
+
+The solve therefore takes two passes in both cases of Table 4: a first, elastic pass that identifies the yielded
+set, and a second pass with the yielded tangents softened. Yielding is a modelling device for plaque
+fracture and stress relief, not a measured plaque property.
+Table 4 | Computed finite element expansion cases (Section 10). Same 16-element mesh, lesion and wall for both devices;
+all values synthetic and deterministic, generated by Appendix C.
+
+Quantity                                                     Balloon angioplasty                      Stent (oversized)
+
+Device / nominal diameter                                       Balloon / 6.0 mm                         Stent / 6.5 mm
+
+Device length                                                             15 mm                                  24 mm
+
+Device pressure                                              1013.25 kPa (10 atm)                     810.60 kPa (8 atm)
+
+Mesh (elements / nodes / free DOF)                                    16 / 17 / 15                           16 / 17 / 15
+
+Minimum lumen, before -> after (at lesion centre)            1.20 mm -> 6.00 mm                     1.20 mm -> 6.50 mm
+
+Lumen gain / residual stenosis (at pressure)                4.80 mm / approx. 0%        5.30 mm / approx. 0% (oversized)
+
+Maximum hoop stress (lesion centre)                                      629 kPa                                659 kPa
+
+Yielded elements                                                 2 (7.5 mm zone)                        2 (7.5 mm zone)
+
+Contact nodes / total device force                                      5 / 223 N                              7 / 293 N
+
+Solver passes                                                                   2                                      2
+
+The balloon column reproduces, value for value, the verified default run of the companion application's
+finite element action - the same hand-check discipline applied to equation (11) in Section 3. The stent
+column is new in this version, computed by the same generator (Appendix C); it is a model comparison, not
+a device recommendation.
+                                                                                                                      11
+
+Figure 3 | Finite element expansion (Section 10). a, Lumen diameter along the 60 mm segment before expansion (reference
+lesion profile, equation 16a) and after the balloon and stent cases of Table 4, with the two contact-cap lines. The balloon restores
+the profile to the 6.0 mm nominal diameter; the oversized stent holds its longer footprint at 6.5 mm, with elastic shoulders
+outside the footprint. b, Element hoop stress and nodal radial displacement for the balloon case, with the 600 kPa yield threshold:
+stress and displacement are both concentrated in the two central elements, which are exactly the yielded set. Profiles are
+computed, not measured.
+
+10.5 What the comparison shows
+Three features of Table 4 are structural, not parametric accidents. First, the maximum stress sits at the
+lesion centre in both cases even though the load is uniform over the footprint, because the centre elements
+combine the largest stretch with the largest plaque stiffening - the longitudinal analogue of the radius
+effect in Section 6.1. Second, the yielded set is the same two elements (a 7.5 mm zone) for both devices: at
+these diameters the centre elements pass the 600 kPa yield stress under either device, while their
+neighbours, one element away, peak at 82 kPa (stent) and 18 kPa (balloon). Yielding here is a property of
+the lesion geometry, not of the device choice. Third, the stent's total device force is higher (293 N against
+223 N) despite its lower pressure, because the force resultant scales with the reference surface the device
+spans, and the stent spans six elements against the balloon's four; pressure alone is therefore as
+incomplete a device descriptor as stiffness alone was a tissue descriptor in Section 6.
+The stent's larger lumen gain (5.30 mm against 4.80 mm) is bought with a higher peak stress (659 kPa
+against 629 kPa), because the oversized cap drives the centre elements further along the softened post-
+yield line of equation (19). Both residual stenoses are reported at pressure, with the device in place;
+neither number is a post-procedure outcome, and the balloon figure in particular would fall once deflation
+recoil - which this static model does not contain - is accounted for.
+
+
+
+
+                                                                                                                                12
+
+10.6 Design implications for balloon catheters and stents
+Reading Table 4 as a designer rather than an analyst - what should be chosen, and what does each choice
+cost? - is a small step, because the model's three device parameters map one-to-one onto the three
+quantities a catheter designer actually specifies: nominal diameter, length and rated pressure. Table 5
+varies each in turn around the Table 4 cases, holding the lesion, wall and mesh fixed. Four rules emerge,
+each traceable to one equation.
+Nominal diameter is the lumen (equation 18). In every variant whose load reaches the cap, the treated
+lumen equals Ddev exactly, so diameter selection is lumen selection. Undersizing the balloon to 5.5 mm
+(B3) caps the gain at 4.30 mm and leaves 8.3% residual stenosis; oversizing the stent by 0.5 mm (S1 against
+S3) adds the full 0.50 mm of gain. The cost of oversizing is set by the post-yield slope of equation (19), 0.216
+ sigma'(lambday) = 206 kPa per unit stretch, or about 59 kPa per additional millimetre of diameter at this
+lesion: the 0.5 mm oversize costs exactly the observed 30 kPa (629 to 659 kPa). Diameter is therefore the
+one parameter that trades lumen against wall stress, and the trade is priced by the yield line, not by the
+elastic law.
+Pressure only has to reach the cap (equations 16 and 18). Dropping the balloon from 10 atm to 8 atm
+(B2 against B1) changes nothing about the result - same lumen, same peak stress, same yielded set, same
+contact nodes - except total force, which falls from 223 N to 178 N in proportion to pressure. Once every
+footprint node is capped, additional pressure buys no lumen; it only raises the force the wall and the
+catheter shaft must carry. In this model a rated pressure is therefore correctly sized to the minimum that
+caps the stiffest element, not maximised.
+Length buys coverage and force, not stress relief (equation 16). Shortening the stent from 24 mm to 15
+mm (S2 against S1) leaves peak stress and lumen gain unchanged, while contact nodes fall from 7 to 5 and
+total force from 293 N to 178 N. Length should be chosen to cover the lesion with margin - the yielded zone
+is 7.5 mm, and both footprints cover it - because length beyond the lesion loads healthy wall at the cap
+without reducing lesion stress.
+Yielding is lesion-set, so stiffness is a lesion property before it is a device property (equation 19). The
+same two elements yield in all six variants of Table 5, across both device types and every parameter
+change. What the device parameters move is the stress level on the post-yield line (607-659 kPa) and the
+force, never the yielded set; and the stress concentration itself is created by the plaque stiffening of
+equation (19), with neighbour elements peaking at or below 82 kPa. A design response to peak stress in this
+model is therefore a diameter response, or a lesion-preparation response that changes the stiffening itself -
+not a pressure or length response.
+Table 5 | Design-space variants around Table 4, computed by Appendix C. B = balloon, S = stent; lesion, wall and mesh
+identical in all rows.
+
+                         D_dev      Length              Lumen after       Gain    Max stress                      Force
+Variant                                    Pressure                                          Yielded Contact
+                         (mm)         (mm)                   (mm)        (mm)          (kPa)                        (N)
+
+B1 balloon, nominal         6.0         15     10 atm           6.00      4.80           629        2        5      223
+
+B2 balloon, lower
+                            6.0         15      8 atm           6.00      4.80           629        2        5      178
+pressure
+
+B3 balloon,
+                            5.5         15     10 atm           5.50      4.30           607        2        5      223
+undersized
+
+S1 stent, oversized         6.5         24      8 atm           6.50      5.30           659        2        7      293
+
+S2 stent, short             6.5         15      8 atm           6.50      5.30           659        2        5      178
+
+S3 stent, nominal
+                            6.0         24      8 atm           6.00      4.80           629        2        7      293
+diameter
+
+
+
+
+                                                                                                                        13
+
+Figure 4 | Design-space summary (Table 5). a, Peak hoop stress by variant, against the 600 kPa yield threshold: diameter moves
+stress (B3, S1/S2), pressure and length do not (B1 against B2; S1 against S2). b, Lumen gain and total device force: force tracks
+pressure and spanned length, gain tracks nominal diameter only. Computed, not measured.
+
+10.7 Limits of the finite element and design analysis
+   One-dimensional ring elements. No bending, no axial stress resultant, no balloon folding, dog-boning
+   or stent strut geometry; longitudinal coupling is the tridiagonal system of equation (16) and nothing
+   more, so the design rules of Section 10.6 are rules inside this discretisation, not bench or clinical
+   findings.
+   Contact cap is a constraint, not a contact solve. Capped nodes are held at the nominal device
+   diameter by an active-set pass; friction, slip, compliance of a real balloon (which grows with pressure)
+   and partial contact are not modelled - a real balloon's diameter is not the hard cap equation (18)
+   assumes.
+   Plaque is a factor and a threshold. The stiffening factor phi and yield stress sigmay are modelling
+   assumptions; no plaque composition was measured, and the lesion profile of equation (16a) is the
+   synthetic default, stated in full so it can be replaced.
+   Static loading. No pulsatile pressure, viscoelasticity or recoil after deflation, so residual stenosis is an
+   at-pressure result and the design trade-offs omit recoil, fatigue and deliverability entirely.
+   Not device guidance. Nothing in Sections 10.6-10.7 is a sizing recommendation for any real catheter,
+   stent, lesion or patient. Independent, not peer-reviewed, synthetic-only, no patient data, experimental
+   and not for clinical decisions.
+Reproducibility. Appendix C is the generator for Tables 4 and 5: the Thomas solver, the active-set cap and
+the two-pass yield update, in runnable form; running it prints every row of both tables. Figures 3 and 4 are
+plotted from the same computed arrays.
+
+
+
+
+                                                                                                                             14
+
+11 Health economics: costs, revenue and a three-year trajectory
+Sections 2-10 price nothing. This section (Version 1.2) adds the missing economic layer: a bottom-up cost
+and revenue model for a hypothetical commercial deployment of the kernel-plus-simulation platform,
+projected over three years, with a statistical machine-learning model fitted as an independent arithmetic
+cross-check. The framing discipline of the earlier sections applies unchanged: every price, adoption count
+and effect size below is a labelled synthetic assumption, the trajectory is a scenario, not a forecast, and no
+revenue figure here is a claim about any real company, hospital or product.
+
+11.1 Revenue identity and cost components
+Revenue has three components, matching the three things the platform does. Each treated case pays a per-
+case software fee for kernel scoring and simulation; each active site pays an annual licence; and each case
+treated with a catheter or stent whose design used the Section 10 finite element sweep pays a per-case
+design royalty. With St active sites, Nt cases, per-case fee pt, licence L, FE-designed share qt and royalty r,
+
+                                         Rt = Nt pt + St L + Nt qt r, Nt = 12 St ct
+                                                                                                                     (20)
+
+
+where ct is cases per site per month. Costs are a variable cost per case (compute, support, quality and
+regulatory overhead allocated per case) plus fixed operating cost (engineering, clinical-affairs and sales
+teams), both in Table 6 for the central ("scale") scenario.
+Table 6 | Unit economics and drivers, scale scenario. All values are synthetic assumptions in USD, stated so the
+trajectory can be regenerated exactly.
+
+Driver                                                                            Year 1          Year 2           Year 3
+
+Active sites S                                                                         90            210             340
+
+Cases per site per month c                                                             16             20              24
+
+Cases per year N                                                                  17,280          50,400           97,920
+
+Per-case software fee p (USD)                                                         680            740             800
+
+Site licence L (USD per site per year)                                            40,000          40,000           40,000
+
+FE-designed case share q                                                              25%            40%             55%
+
+Design royalty r (USD per FE case)                                                    300            300             300
+
+Variable cost per case (USD)                                                          210            230             250
+
+Fixed operating cost (USD M)                                                          9.0            16.0            24.0
+
+
+
+
+                                                                                                                       15
+
+11.2 Payer perspective: what a case must save
+Provider revenue is a payer cost, so a health-economics section must state the other side of the ledger. In
+Year 3 the platform charges, per case, the fee plus the licence and royalty amortised over volume: 800 +
+13.60M/97,920 + 16.16M/97,920 = USD 1,104 per case. If the platform's only monetised benefit were avoided
+reinterventions at an assumed USD 18,500 per reintervention, the absolute reduction in reintervention
+probability needed to break even is
+
+ p* = (platform price per case) / (cost per reintervention) = 1,104 / 18,500 = 5.97 percentage points
+                                                                                                          (21)
+
+
+At a purely hypothetical 2.1-percentage-point reduction, the expected avoided cost is USD 389 per case -
+well short of the price. The scenario therefore does not claim cost savings for payers: at the stated prices it
+is a net cost to the health system unless outcome effects near 6 percentage points, or other benefits (shorter
+procedures, fewer complications, capacity release), are demonstrated. None is demonstrated here;
+equation (21) simply marks where the burden of proof lies.
+
+11.3 Statistical machine learning: a fitted cross-check
+The accounting identity (20) is exact but unfitted - it assumes its conclusion. To test whether a statistical
+learner, shown only noisy site-level data, recovers the same economics, a synthetic panel of 160 sites x 24
+months (3,840 site-months) was generated from equation (20) at site-month level, with Poisson case counts,
+three price/licence tiers, a ramping FE-designed share, site effects and Gaussian noise (sigma = USD 250). A
+ridge regression on engineered features x = (cases, fee, share, cases x fee, cases x share, licence) was fitted
+on months 1-18 and tested on months 19-24,
+
+
+              w = argminw || y - Xw ||2 +  ||w||2,  = 0.01 by 5-fold cross-validation
+                                                                                                          (22)
+
+
+with a gradient-boosted ensemble of depth-2 regression trees (200 rounds, learning rate 0.1, implemented
+directly in NumPy) on the raw features as a non-linear comparator. On the held-out months the ridge
+model reaches R2 = 0.997 (RMSE USD 408 per site-month) and the boosted trees R2 = 0.989 (RMSE USD 813).
+More informative than either score, the back-transformed ridge coefficients recover the data-generating
+prices: 0.97 on cases x fee (true value 1, the fee itself) and USD 301 on cases x share (true royalty USD 300).
+The licence coefficient is attenuated to 0.53 because licence tier and fee tier are collinear in the panel -
+reported here rather than tuned away, as a reminder that even a near-perfect R2 does not identify every
+price separately.
+
+
+
+
+                                                                                                            16
+
+11.4 Three-year trajectory: accounting model versus fitted model
+Applying the fitted ridge model to the planned driver means of Table 6 gives a second, independent-
+looking estimate of the same trajectory. The two agree to within 2% in every year, which is the expected
+result - the learner was trained on data generated by the same identity - and is reported as an arithmetic
+cross-check, not as validation of the assumptions. Contribution is revenue minus variable and fixed costs,
+
+                                               Contributiont = Rt - vt Nt - Ft
+                                                                                                                                (23)
+
+
+Table 7 | Three-year trajectory, scale scenario (USD millions unless stated). Computed from equation (20) and Table 6 by
+Appendix D.
+
+Line                                                                                  Year 1             Year 2              Year 3
+
+Per-case software fees                                                                 11.75              37.30               78.34
+
+Annual site licences                                                                    3.60                8.40              13.60
+
+FE-design royalties                                                                     1.30                6.05              16.16
+
+Total revenue                                                                          16.65              51.74              108.09
+
+Total costs (variable + fixed)                                                         12.63              27.59               48.48
+
+Contribution                                                                            4.02              24.15               59.61
+
+Contribution margin                                                                    24.1%              46.7%              55.1%
+
+Ridge ML prediction of revenue                                                         16.34              51.66              108.89
+
+Year 3 revenue in the scale scenario is USD 108.09M by accounting and USD 108.89M by the fitted model -
+above USD 100M in both. Three-year cumulative revenue is USD 176.48M and cumulative contribution USD
+87.78M. The margin expansion is mechanical operating leverage: fixed costs grow 2.7-fold while case
+volume grows 5.7-fold, so the fixed cost per case falls from USD 521 in Year 1 to USD 245 in Year 3.
+
+
+
+
+Figure 5 | Three-year revenue trajectory, scale scenario. Stacked components from equation (20): per-case software fees (dark
+red), site licences (ochre) and FE-design royalties (blue). Black markers are the ridge machine-learning predictions of Section 11.3;
+the dashed line marks USD 100M, crossed in Year 3. Plotted from the same computed values as Table 7.
+
+
+
+
+                                                                                                                                 17
+
+11.5 What carries revenue past USD 100M - and what does not
+Table 8 | Scenario spread. Same identity (20), different stated drivers; variable and fixed costs as in Table 6.
+
+Scenario                Year 3 sites     Year 3 cases          Year 3 revenue (USD M)            Year 3 contribution (USD M)
+
+Conservative                    230            57,960                            59.63                                21.14
+
+Scale (central)                 340            97,920                           108.09                                59.61
+
+Upside                          460           149,040                           172.66                               111.40
+
+Decomposing the Year 1 to Year 3 growth (USD 16.65M to 108.09M) shows the trajectory is volume-led, not
+price-led. Case volume contributes most of the increase (17,280 to 97,920 cases, a 5.7-fold rise driven by site
+count and cases per site); the fee path adds only 18% per case over three years; and the fastest-growing
+component is the FE-design royalty (USD 1.30M to 16.16M), because both volume and the FE-designed
+share qt rise together. The Section 10 catheter-design model is therefore not decorative in the economics: at
+the stated royalty it supplies 15% of Year 3 revenue, and setting q3 = 0 would pull Year 3 revenue to USD
+91.94M - below the USD 100M line. Equally, the threshold is not met in the conservative scenario (USD
+59.63M), where adoption reaches only 230 sites. "Above USD 100M in Year 3" is thus a property of the scale
+scenario's stated drivers - 340 sites, 24 cases per site per month, 55% FE-designed share - and of nothing
+else.
+
+11.6 Limits of the economic model
+   Scenario, not forecast. No real pricing, sales, adoption or outcome data were available or used. The
+   bootstrap interval on the Year 3 ridge prediction (USD 108.7-109.1M, 10th-90th percentile over 200 refits)
+   measures coefficient uncertainty only; the honest uncertainty is the scenario spread in Table 8.
+   The ML cross-check is not independent validation. The panel was generated from the same identity it
+   recovers. It verifies that a standard learner can price the panel consistently; it cannot verify that any site
+   will pay the assumed fees.
+   Payer case unproven. At the stated prices the platform is a net cost to payers unless effects near the
+   equation (21) break-even, or non-monetised benefits, are shown with real data.
+   Excluded costs and risks. Regulatory clearance, clinical trials, reimbursement coding, device-
+   manufacturing costs behind the royalty, churn, and competitor response are all outside the model.
+   Contribution is not profit.
+
+  Economic scope statement. Section 11 is a synthetic scenario model inside an independent, not-peer-reviewed
+  preprint. It is not a business plan, an investment document or a forecast for any real organisation, and the
+  companion application remains experimental and not for clinical decisions.
+
+
+
+
+                                                                                                                          18
+
+Appendix D Health-economics and machine-learning generator (Python,
+runnable)
+Condensed form of the Section 11 generator (full script retained with the preprint source). Running it
+prints Tables 6-8, both learners' test scores, and both Year 3 revenue estimates. NumPy only; seed fixed.
+
+ import numpy as np
+ rng = np.random.default_rng(20261122)
+ LIC, ROY = 40_000.0, 300.0
+ VAR, FIXED = [210, 230, 250], [9e6, 16e6, 24e6]
+ SCEN = {
+  "Conservative": dict(sites=[70,140,230], cpm=[15,18,21],
+    fee=[660,700,750], share=[0.20,0.30,0.40]),
+  "Scale (central)": dict(sites=[90,210,340], cpm=[16,20,24],
+    fee=[680,740,800], share=[0.25,0.40,0.55]),
+  "Upside": dict(sites=[110,280,460], cpm=[17,22,27],
+    fee=[700,770,840], share=[0.30,0.50,0.65])}
+
+ def account(d):
+     out = []
+     for y in range(3):
+         N = d["sites"][y] * d["cpm"][y] * 12
+         rev = N*d["fee"][y] + d["sites"][y]*LIC + N*d["share"][y]*ROY
+         cost = N*VAR[y] + FIXED[y]
+         out.append((y+1, N, rev, rev-cost))
+     return out
+
+ for k, d in SCEN.items():
+     for (y, N, rev, con) in account(d):
+         print(k, "Y%d" % y, "cases", N, "rev %.2fM" % (rev/1e6))
+
+ # --- synthetic site-month panel (160 sites x 24 months) ---
+ NS, NM = 160, 24
+ lam = rng.gamma(6.0, 3.2, NS); tier = rng.integers(0, 3, NS)
+ fee_s = np.array([660., 750., 840.])[tier]
+ lic_s = np.array([30_000., 40_000., 50_000.])[tier] / 12
+ sh0 = rng.uniform(0.08, 0.30, NS); fx = rng.normal(0, 300, NS)
+ rows = []
+ for i in range(NS):
+     for m in range(NM):
+         c = rng.poisson(lam[i]*(1+0.08*np.sin(2*np.pi*m/12)))
+         s = min(0.65, sh0[i] + 0.012*m)
+         r = lic_s[i] + c*fee_s[i] + c*s*ROY + fx[i] + rng.normal(0, 250)
+         rows.append((c, fee_s[i], s, lic_s[i], r, m))
+ P = np.array(rows, float)
+ cases, fee, share, licm, rev, month = P.T
+ Xr = np.column_stack([cases, fee, share, cases*fee, cases*share, licm])
+ Xg = np.column_stack([cases, fee, share, licm])
+ tr, te = month < 18, month >= 18
+
+ def ridge_fit(X, y, L):
+     mu, sd = X.mean(0), X.std(0) + 1e-12
+     Z = (X - mu) / sd
+     w = np.linalg.solve(Z.T @ Z + L*np.eye(X.shape[1]),
+                         Z.T @ (y - y.mean()))
+     return mu, sd, w, y.mean()
+
+ def ridge_pred(mdl, X):
+     mu, sd, w, ym = mdl
+     return ym + ((X - mu)/sd) @ w
+
+ model = ridge_fit(Xr[tr], rev[tr], 0.01)   # lambda by 5-fold CV
+ pr = ridge_pred(model, Xr[te])
+ r2 = 1 - ((rev[te]-pr)**2).sum() / ((rev[te]-rev[te].mean())**2).sum()
+ print("ridge R2 %.3f RMSE %.0f" % (r2, np.sqrt(np.mean((rev[te]-pr)**2))))
+ mu, sd, w, ym = model
+ print("recovered cases x fee %.3f, cases x share %.0f"
+       % ((w/sd)[3], (w/sd)[4]))
+
+                                                                                                      19
+
+Appendix D (continued) Boosting comparator and forecast
+
+ # --- gradient boosting, depth-2 trees, implemented directly ---
+ def best_split(Xs, rs, min_leaf=60):
+     b = (np.inf, None, None)
+     for j in range(Xs.shape[1]):
+         for q in np.quantile(Xs[:, j], np.linspace(.1, .9, 9)):
+              L = Xs[:, j] <= q
+              if L.sum() < min_leaf or (~L).sum() < min_leaf: continue
+              sse = ((rs[L]-rs[L].mean())**2).sum() \
+                  + ((rs[~L]-rs[~L].mean())**2).sum()
+              if sse < b[0]: b = (sse, j, q)
+     return b
+
+ def build(Xs, rs, d):
+     node = {"val": rs.mean()}
+     if d == 0 or len(rs) < 120: return node
+     sse, j, q = best_split(Xs, rs)
+     if j is None: return node
+     L = Xs[:, j] <= q
+     node.update(j=j, q=q, left=build(Xs[L], rs[L], d-1),
+                 right=build(Xs[~L], rs[~L], d-1))
+     return node
+
+ def tpred(node, X):
+     if "j" not in node: return np.full(len(X), node["val"])
+     L = X[:, node["j"]] <= node["q"]
+     out = np.empty(len(X))
+     out[L] = tpred(node["left"], X[L])
+     out[~L] = tpred(node["right"], X[~L])
+     return out
+
+ base = rev[tr].mean(); ptr = np.full(tr.sum(), base); trees = []
+ for _ in range(200):
+     t = build(Xg[tr], rev[tr] - ptr, 2)
+     trees.append(t); ptr += 0.1 * tpred(t, Xg[tr])
+ pg = np.full(te.sum(), base)
+ for t in trees: pg += 0.1 * tpred(t, Xg[te])
+ r2g = 1 - ((rev[te]-pg)**2).sum() / ((rev[te]-rev[te].mean())**2).sum()
+ print("gbm R2 %.3f RMSE %.0f" % (r2g, np.sqrt(np.mean((rev[te]-pg)**2))))
+
+ # --- apply the fitted ridge model to the planned drivers ---
+ d = SCEN["Scale (central)"]
+ for y in range(3):
+     x = np.array([[d["cpm"][y], d["fee"][y], d["share"][y],
+                    d["cpm"][y]*d["fee"][y], d["cpm"][y]*d["share"][y],
+                    LIC/12.0]])
+     annual = float(ridge_pred(model, x)[0]) * d["sites"][y] * 12
+     print("ML Y%d revenue %.2fM" % (y+1, annual/1e6))
+ # prints: ridge R2 0.997 RMSE 408; gbm R2 0.989 RMSE 813;
+ # recovered 0.965 / 301; ML revenue 16.34 / 51.66 / 108.89M;
+ # Scale accounting revenue 16.65 / 51.74 / 108.09M (Year 3 > 100M)
+
+
+Figure 5 is plotted from the accounting rows printed above. The payer break-even of equation (21) follows
+from the Year 3 rows: platform price per case = 108.09M / 97,920 = USD 1,104, and 1,104 / 18,500 = 5.97
+percentage points.
+
+ Version 1.2. Independent and not peer reviewed. Synthetic data only, quantum kernel classically emulated, no
+ quantum advantage claimed, experimental and not for clinical decisions. Section 11 is a synthetic scenario model,
+ not a forecast or a business plan.
+
+
+
+
+                                                                                                                     20
+
+References
+1. Havlicek, V. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209-212 (2019).
+2. Schuld, M. & Petruccione, F. Supervised Learning with Quantum Computers (Springer, 2018).
+3. Schuld, M., Sweke, R. & Meyer, J. J. Effect of data encoding on the expressive power of variational quantum-machine-
+   learning models. Phys. Rev. A 103, 032430 (2021).
+4. Ogden, R. W. Non-Linear Elastic Deformations (Ellis Horwood, 1984).
+5. Holzapfel, G. A., Gasser, T. C. & Ogden, R. W. A new constitutive framework for arterial wall mechanics and a
+   comparative study of material models. J. Elast. 61, 1-48 (2000).
+6. Fung, Y. C. Biomechanics: Mechanical Properties of Living Tissues 2nd edn (Springer, 1993).
+7. Peterson, L. H., Jensen, R. E. & Parnell, J. Mechanical properties of arteries in vivo. Circ. Res. 8, 622-639 (1960).
+8. Mooney, M. A theory of large elastic deformation. J. Appl. Phys. 11, 582-592 (1940); Rivlin, R. S. Large elastic
+   deformations of isotropic materials. Phil. Trans. R. Soc. A 241, 379-397 (1948).
+9. Bathe, K.-J. Finite Element Procedures 2nd edn (Klaus-Jurgen Bathe, 2014).
+10. Thomas, L. H. Elliptic problems in linear difference equations over a network. Watson Scientific Computing
+  Laboratory Report (Columbia University, 1949).
+11. Drummond, M. F., Sculpher, M. J., Claxton, K., Stoddart, G. L. & Torrance, G. W. Methods for the Economic Evaluation of
+  Health Care Programmes 4th edn (Oxford Univ. Press, 2015).
+12. Hoerl, A. E. & Kennard, R. W. Ridge regression: biased estimation for nonorthogonal problems. Technometrics 12, 55-67
+  (1970).
+13. Friedman, J. H. Greedy function approximation: a gradient boosting machine. Ann. Stat. 29, 1189-1232 (2001).
+
+
+Data and code availability
+All data in this preprint are synthetic and are fully specified by Tables 1 and 3. The generating code is
+reproduced in Appendices A and B, the finite element generator of Section 10 in Appendix C, and the
+health-economics and machine-learning generator of Section 11 in Appendix D; no external dataset,
+patient record or hospital system was accessed. The companion application is experimental software and
+is not connected to a live PACS or any clinical system.
+
+Acknowledgements and competing interests
+No funding, affiliation or competing interest is declared for this independent preprint. The work was
+prepared as the mathematical companion to an experimental vascular-surgery application built in the
+same project.
+
+
+
+
+                                                                                                                           21
+
+Appendix A Python generator (condensed, runnable)
+
+import math
+MMHG = 0.133322   # kPa per mmHg
+
+def hoop_stress(lam, mu, alpha):
+    return mu * ((1 - alpha) + alpha * lam**-2) * (lam**2 - lam**-2)
+
+def pressure_kpa(lam, mu, alpha, H_R):
+    return H_R * lam**-2 * hoop_stress(lam, mu, alpha)
+
+def lam_at(P_mmHg, mu, alpha, H_R):
+    target, lo, hi = P_mmHg * MMHG, 1.0, 3.0
+    for _ in range(80):
+        mid = (lo + hi) / 2
+        if pressure_kpa(mid, mu, alpha, H_R) < target: lo = mid
+        else: hi = mid
+    return (lo + hi) / 2
+
+PRESETS = {
+  "Healthy carotid":   dict(D0=6.0, H=0.60, mu=204.0, alpha=0.25),
+  "AAA wall":          dict(D0=42.0, H=1.80, mu=420.0, alpha=0.30),
+  "Stiff / calcified": dict(D0=5.5, H=0.80, mu=650.0, alpha=0.20),
+  "Vein graft":        dict(D0=4.0, H=0.40, mu=180.0, alpha=0.25),
+  "Synthetic graft":   dict(D0=6.0, H=0.50, mu=900.0, alpha=0.10),
+}
+for name, p in PRESETS.items():
+    H_R = p["H"] / (p["D0"] / 2)
+    ld = lam_at(80, p["mu"], p["alpha"], H_R)
+    ls = lam_at(120, p["mu"], p["alpha"], H_R)
+    Dd, Ds = p["D0"] * ld, p["D0"] * ls
+    eps = (Ds - Dd) / Dd
+    Ep = 40.0 / eps
+    beta = math.log(120 / 80) / eps
+    sigma_s = 120 * MMHG * (Ds / 2) / (p["H"] / ls)
+    print(name, round(Dd,2), round(Ds,2), round(eps*100,2),
+          round(Ep), round(beta,2), round(sigma_s))
+
+
+
+
+                                                                       22
+
+Appendix A (continued) Kernel in Python
+
+import math
+
+def qkernel(f, g):
+    # theta_j = (pi/2) f_j ; k = prod cos^2((theta_j - theta'_j)/2)
+    k = 1.0
+    for a, b in zip(f, g):
+        k *= math.cos(math.pi * (a - b) / 4) ** 2
+    return k
+
+P_LOW = [0.15, 0.30, 0.20, 0, 0, 0.20]
+P_HIGH = [0.85, 0.75, 0.80, 1, 1, 0.80]
+CASES = {
+  "A": [0.20, 0.35, 0.25, 0, 0, 0.20],
+  "B": [0.45, 0.55, 0.40, 0, 1, 0.40],
+  "C": [0.80, 0.70, 0.75, 1, 1, 0.60],
+  "D": [0.65, 0.85, 0.55, 1, 0, 0.80],
+  "E": [0.90, 0.45, 0.30, 0, 0, 0.20],
+  "F": [0.85, 0.80, 0.85, 1, 1, 1.00],
+}
+for name, f in CASES.items():
+    kl, kh = qkernel(f, P_LOW), qkernel(f, P_HIGH)
+    print(name, round(kl, 3), round(kh, 3), round(kh - kl, 3),
+          "higher" if kh > kl else "lower")
+# Expected: A 0.995 0.113 -0.883 lower | B 0.433 0.361 -0.072 lower
+#           C 0.128 0.971 +0.843 higher | D 0.259 0.466 +0.207 higher
+#           E 0.678 0.160 -0.518 lower | F 0.077 0.973 +0.895 higher
+
+
+
+
+                                                                        23
+
+Appendix B JavaScript kernel and inflation (as in the application)
+
+ // Quantum kernel - exact classical emulation, 6 qubits, angle encoding
+ function quantumKernel(f, g) {
+   let k = 1;
+   for (let j = 0; j < 6; j++) {
+     const dTheta = (Math.PI / 2) * (f[j] - g[j]);
+     k *= Math.cos(dTheta / 2) ** 2;   // per-qubit fidelity factor
+   }
+   return k;
+ }
+ const P_LOW = [0.15, 0.30, 0.20, 0, 0, 0.20];
+ const P_HIGH = [0.85, 0.75, 0.80, 1, 1, 0.80];
+ function kernelScore(f) {
+   const kLow = quantumKernel(f, P_LOW);
+   const kHigh = quantumKernel(f, P_HIGH);
+   return { kLow, kHigh, score: kHigh - kLow,
+            label: kHigh > kLow ? "higher" : "lower" };
+ }
+
+ // Soft tissue - Mooney-Rivlin hoop stress and Laplace pressure (kPa)
+ function hoopStress(lam, mu, alpha) {
+   return mu * ((1 - alpha) + alpha / lam**2) * (lam**2 - 1 / lam**2);
+ }
+ function pressureKPa(lam, mu, alpha, H_R) {
+   return H_R * hoopStress(lam, mu, alpha) / lam**2;
+ }
+ function diameterAt(PmmHg, preset) {
+   const H_R = preset.H / (preset.D0 / 2), target = PmmHg * 0.133322;
+   let lo = 1, hi = 3;
+   for (let i = 0; i < 80; i++) {
+     const mid = (lo + hi) / 2;
+     if (pressureKPa(mid, preset.mu, preset.alpha, H_R) < target) lo = mid;
+     else hi = mid;
+   }
+   return preset.D0 * (lo + hi) / 2;
+ }
+
+
+
+
+                                                                              24
+
+Appendix C Finite element solver (Python, runnable)
+
+ import math
+
+ # Finite element expansion - Thomas solver (Section 10, Table 4, Figure 3)
+ N, L_SEG = 16, 60.0
+ LE = L_SEG / N                      # 3.75 mm
+ ZC, D_NOM, D_MIN, SIG_G = 30.0, 6.0, 1.20, 1.55
+ H, MU, ALPHA, PHI = 0.60, 204.0, 0.25, 2.5
+ SIGMA_Y, SOFT = 600.0, 0.216        # kPa; post-yield tangent fraction
+ Z = [i * LE for i in range(N + 1)]
+ DREF = [D_NOM - (D_NOM - D_MIN) * math.exp(-((z - ZC) ** 2) / (2 * SIG_G ** 2)) for z in Z]
+ DE = [(DREF[e] + DREF[e + 1]) / 2 for e in range(N)]
+ MUE = [MU * (1 + (PHI - 1) * (1 - DE[e] / D_NOM)) for e in range(N)]
+
+ def stress(lam, mu):
+     return mu * ((1 - ALPHA) + ALPHA * lam ** -2) * (lam ** 2 - lam ** -2)
+
+ def tangent(lam, mu):
+     A = (1 - ALPHA) + ALPHA * lam ** -2
+     return mu * (-2 * ALPHA * lam ** -3 * (lam ** 2 - lam ** -2)
+                  + A * (2 * lam + 2 * lam ** -3))
+
+ def lam_yield(mu):
+     lo, hi = 1.0, 4.0
+     for _ in range(80):
+         mid = (lo + hi) / 2
+         if stress(mid, mu) < SIGMA_Y: lo = mid
+         else: hi = mid
+     return (lo + hi) / 2
+
+ def thomas(a, b, c, d):
+     n = len(d); cp = [0.0] * n; dp = [0.0] * n
+     cp[0] = c[0] / b[0]; dp[0] = d[0] / b[0]
+     for i in range(1, n):
+         m = b[i] - a[i] * cp[i - 1]
+         cp[i] = c[i] / m if i < n - 1 else 0.0
+         dp[i] = (d[i] - a[i] * dp[i - 1]) / m
+     x = [0.0] * n; x[-1] = dp[-1]
+     for i in range(n - 2, -1, -1):
+         x[i] = dp[i] - cp[i] * x[i + 1]
+     return x
+
+ def expand(p_atm, d_dev, dev_len):
+     P = p_atm * 101.325                       # kPa
+     loaded = [i for i in range(N + 1) if abs(Z[i] - ZC) <= dev_len / 2]
+     cap = {i: max(0.0, (d_dev - DREF[i]) / 2) for i in loaded}
+     F = [0.0] * (N + 1)
+     for i in loaded: F[i] = P * LE * d_dev    # mN
+
+
+
+
+                                                                                               25
+
+Appendix C (continued) Expansion routine and design variants
+
+    def solve(tan):
+         ke = [tan[e] * (H / (DE[e] / 2)) * LE for e in range(N)]   # Eq. (17)
+         fixed = {0: 0.0, N: 0.0}
+         for _ in range(8):                    # active-set contact cap
+             a = [0.0] * (N - 1); b = [0.0] * (N - 1); c = [0.0] * (N - 1)
+             rhs = F[1:N][:]
+             for e in range(N):
+                 i, j = e, e + 1
+                 if 1 <= i <= N - 1: b[i - 1] += ke[e]
+                 if 1 <= j <= N - 1: b[j - 1] += ke[e]
+                 if 1 <= i <= N - 1 and 1 <= j <= N - 1:
+                     c[i - 1] -= ke[e]; a[j - 1] -= ke[e]
+                 if i in fixed and 1 <= j <= N - 1 and j not in fixed: rhs[j - 1] += ke[e] *
+fixed[i]
+                 if j in fixed and 1 <= i <= N - 1 and i not in fixed: rhs[i - 1] += ke[e] *
+fixed[j]
+             for node, val in fixed.items():
+                 if 1 <= node <= N - 1:
+                     k = node - 1; rhs[k] = val; b[k] = 1.0; a[k] = 0.0; c[k] = 0.0
+                     if k - 1 >= 0: c[k - 1] = 0.0
+                     if k + 1 < N - 1: a[k + 1] = 0.0
+             x = thomas(a, b, c, rhs)
+             u = [0.0] * (N + 1); u[1:N] = x
+             for node, val in fixed.items(): u[node] = val
+             u = [max(v, 0.0) for v in u]
+             new = [i for i in loaded if i not in fixed and u[i] > cap[i] + 1e-9]
+             if not new:
+                 return u, sorted(i for i in fixed if i in cap)
+             for i in new: fixed[i] = cap[i]
+         return u, sorted(i for i in fixed if i in cap)
+
+     tan = [tangent(1.0, MUE[e]) for e in range(N)]
+     u1, _ = solve(tan)                        # pass 1: elastic
+     lam1 = [(DE[e] + u1[e] + u1[e + 1]) / DE[e] for e in range(N)]
+     yielded = [e for e in range(N) if stress(lam1[e], MUE[e]) > SIGMA_Y]
+     tan = [tangent(max(lam1[e], 1.0), MUE[e]) for e in range(N)]
+     for e in yielded: tan[e] = SOFT * tangent(lam_yield(MUE[e]), MUE[e])
+     u, contact = solve(tan)                   # pass 2: yielded elements softened
+     lam = [(DE[e] + u[e] + u[e + 1]) / DE[e] for e in range(N)]
+     sig = [SIGMA_Y + SOFT * tangent(lam_yield(MUE[e]), MUE[e]) * (lam[e] - lam_yield(MUE[e]))
+            if e in yielded else stress(lam[e], MUE[e]) for e in range(N)]
+     D_after = [DREF[i] + 2 * u[i] for i in range(N + 1)]
+     centre = DREF.index(min(DREF))
+     spanned = [e for e in range(N) if e in loaded and e + 1 in loaded]
+     F_tot = (P / 1000) * math.pi * sum(DE[e] for e in spanned) * LE   # N
+     print(f"P={P:.2f} kPa lumen {min(DREF):.2f} -> {D_after[centre]:.2f} mm "
+           f"max stress {max(sig):.0f} kPa yielded {len(yielded)} "
+           f"contact {len(contact)} F={F_tot:.0f} N passes=2")
+     return D_after, sig, u
+
+expand(10.0, 6.0, 15.0)       # balloon:   1013.25 kPa, 1.20 -> 6.00 mm, 629 kPa, 223 N
+expand(8.0, 6.5, 24.0)        # stent:      810.60 kPa, 1.20 -> 6.50 mm, 659 kPa, 293 N
+
+# Design variants (Table 5): pressure, diameter and length sweeps
+expand(8.0, 6.0, 15.0)    # B2 balloon, lower pressure: 629 kPa, 178 N
+expand(10.0, 5.5, 15.0)   # B3 balloon, undersized: 5.50 mm, 607 kPa, 223 N
+expand(8.0, 6.5, 15.0)    # S2 stent, short: 659 kPa, 178 N
+expand(8.0, 6.0, 24.0)    # S3 stent, nominal diameter: 629 kPa, 293 N
+
+
+
+ End of preprint. Independent and not peer reviewed. Synthetic data only, quantum kernel classically emulated, no
+ quantum advantage claimed, experimental and not for clinical decisions.
+
+
+
+
+                                                                                                                    26
+

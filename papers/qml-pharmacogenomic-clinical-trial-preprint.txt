@@ -1,0 +1,789 @@
+N AT U R E P R E P R I N T   |   QUANTUM MACHINE LEARNING               |   PHARMACOGENOMICS
+
+
+
+Quantum machine learning signatures for
+pharmacogenomic states: a finite-
+mathematics framework and adaptive
+clinical trial management protocol
+Cartik1 and collaborators
+1 Independent research preprint in the style of a Nature Portfolio preprint. Not affiliated with, endorsed by, or reporting
+data from AstraZeneca or Sunnybrook Health Sciences Centre. No patient data are reported.
+
+
+
+   Abstract
+
+   Pharmacogenomic states - reproducible patterns of germline variants, somatic alterations and gene
+   expression that predict drug response - are now defined at population scale by classical genomics.
+   Whether quantum machine learning (QML) adds anything beyond a classical classifier for such states
+   remains unproven. This preprint makes the question finite and therefore testable. We formalise a
+   pharmacogenomic signature as a function on a finite genotype alphabet, embed it in a finite-
+                                     n
+   dimensional Hilbert space C2 via angle encoding, and derive finite-sample generalisation bounds that
+   do not rely on asymptotic quantum advantage. We then embed the signature in a complete clinical
+   trial management protocol: pre-registered eligibility, signature-stratified randomisation, a finite-state
+   Markov model of trial states, Bayesian interim monitoring with explicit stopping boundaries, and
+   multiplicity control across a finite family of hypotheses. A fully reproducible synthetic-data
+   experiment, with complete Python source code in the Appendix, shows a quantum-kernel classifier
+   performing comparably to - not better than - a classical radial-basis-function support vector machine.
+   The contribution is the auditable framework and management protocol, not a claim of quantum
+   advantage, clinical efficacy, or an AstraZeneca product. Part II (Sections 8-10) adds a finite, discounted
+   10-year health-economics and trajectory model for Sunnybrook's Odette Cancer Centre, 2027-2036,
+   built on published scale figures only, with all treatment effects as hypothetical assumptions.
+
+   Keywords: quantum machine learning; pharmacogenomics; quantum kernel; finite-sample bounds;
+   adaptive trial; health economics; Sunnybrook; Odette Cancer Centre; AstraZeneca (context only)
+
+
+
+
+   Scope and honesty statement. AstraZeneca has reported quantum-computing pilots in computational
+   chemistry (for example with IonQ, AWS and NVIDIA in 2025) and large-scale classical genomics
+   through its Centre for Genomics Research. No published AstraZeneca product combines QML with
+   pharmacogenomic signatures. This preprint therefore treats that combination as a research proposal,
+   uses only synthetic data, and labels every numerical result as synthetic.
+
+
+
+Main contributions
+ 1. A finite formalisation: finite alphabets, finite Hilbert spaces, finite hypothesis families and finite
+    trial states throughout - no infinite-dimensional or asymptotic claim is needed.
+ 2. Closed-form finite-sample bounds for signature error and trial operating characteristics.
+ 3. An end-to-end trial management protocol that a data monitoring committee could audit line by line.
+ 4. Complete, runnable source code (Appendix A) that regenerates the synthetic experiment and the
+    trial simulation.
+QML pharmacogenomic signatures - Preprint - Not peer reviewed                                                            1
+
+1 Introduction: genomics defines the problem, QML is only a candidate solver
+Modern pharmacogenomics begins classically. Large sequencing programmes - AstraZeneca's Centre
+for Genomics Research, built around up to two million genome sequences including more than 500,000
+from its own clinical trials, is a prominent industry example - link variants and expression to disease
+biology and drug response. A signature learned from such data can select patients for a trial, stratify
+randomisation, or define a companion diagnostic hypothesis. None of that requires a quantum
+computer.
+
+Quantum computing enters AstraZeneca's public record elsewhere: hybrid quantum-classical
+chemistry workflows, quantum-inspired drug-discovery partnerships, and exploratory work with IBM
+Quantum on clinical-data imputation and lead-compound selection. Conflating the two programmes
+would be an error. The correct scientific question is narrower: given a classically defined, finite
+pharmacogenomic feature set, does a quantum feature map classify response states better, on finite
+samples, than the best classical kernel - and can that comparison be run inside a properly managed
+trial?
+
+
+2 Finite mathematics framework
+
+2.1 Finite genotype and expression alphabet
+Let each patient be described by d features. After pre-registered discretisation, feature j takes values in
+a finite alphabet Aj with |Aj| = mj (for example, genotype in {0,1,2} copies of a minor allele, so mj = 3).
+The patient space is therefore finite:
+
+                                 X = A1 x ... x Ad,    |X| = prodj=1..d mj < infinity.
+
+A pharmacogenomic state is a label y in Y = {0,1} (non-responder, responder) or a finite set of subtypes
+Y = {1,...,K}. A signature is a function s: X -> Y. Because X and Y are finite, the total number of possible
+signatures is |Y||X| - astronomically large but finite, which is exactly what makes counting-based
+bounds possible.
+
+2.2 Finite-dimensional quantum embedding
+Encode a scaled feature vector x in [0, pi]d on n qubits (n >= d, one feature per qubit in the simplest
+scheme) by angle encoding:
+
+                                                                                           n
+                      |phi(x)> = tensorj=1..n [ cos(xj/2)|0> + sin(xj/2)|1> ] in H = C2 .
+
+H is finite-dimensional: dim H = 2n. The quantum kernel is the squared overlap, computable on
+hardware by an inversion test and exactly in simulation:
+
+                             kQ(x, x') = |<phi(x)|phi(x')>|2 = prodj cos2((xj - x'j)/2).
+
+Entangling layers replace this product form with a general unitary U(x) and kQ(x,x') = |
+<0|Udagger(x)U(x')|0>|2, still a finite matrix computation in dimension 2n.
+
+
+
+
+QML pharmacogenomic signatures - Preprint - Not peer reviewed                                             2
+
+2.3 Finite-sample generalisation bound
+
+Let H be a finite hypothesis class of signatures, |H| finite, and let err(h) be true error and err-hat(h)
+empirical error on N independent patients. Hoeffding's inequality plus a union bound over the finite
+class gives, for any epsilon > 0:
+
+                P( exists h in H : |err(h) - err-hat(h)| > epsilon ) <= 2|H| exp(-2 N epsilon2).
+
+Setting the right-hand side to delta and solving for N gives the finite sample complexity used for trial
+sizing in Section 4:
+
+
+   Proposition 1 (finite signature sample size). To guarantee, with probability at least 1 - delta, that
+   every candidate signature's empirical error is within epsilon of its true error, it suffices that
+
+
+   N >= (1 / 2 epsilon2) . [ ln|H| + ln(2/delta) ].
+
+
+   Example: |H| = 1,000 candidate signatures, epsilon = 0.05, delta = 0.05 gives N >= 200 x (6.91 + 3.69) =
+   2,120 patients. The bound is conservative - deliberately so for a pre-registered trial.
+
+
+For kernel classifiers the same finiteness appears through the Gram matrix: on N patients, K is an N x N
+positive semidefinite matrix, the dual problem has at most N variables, and the representer theorem
+confines the solution to span{k(., xi)}. Nothing infinite enters the computation.
+
+
+2.4 Finite trial states as a Markov chain
+Trial management is modelled on a finite state set S = {Screening, Eligible, Randomised, On-treatment,
+Follow-up, Completed, Withdrawn, Safety-hold}. Transitions form a row-stochastic matrix P in R8x8, Pab
+>= 0, sumb Pab = 1. After t steps the occupancy distribution is vt = v0 Pt, a finite vector computation.
+Expected time to absorption (Completion or Withdrawal) follows from the fundamental matrix of the
+absorbing chain:
+
+                               M = (I - Q)-1,   expected steps to absorption = M . 1,
+
+where Q is the transient-to-transient submatrix. This gives a closed-form forecast of screening load and
+completion times from observed transition counts.
+
+
+3 Methods: signature learning
+
+Features (pre-registered). Germline pharmacogene variants (for example CYP2D6, CYP2C19, DPYD,
+UGT1A1 activity scores), somatic alterations where relevant, and binned expression of a fixed gene
+panel. Feature list, bins and scaling to [0, pi] are frozen before unblinding.
+
+Classifiers compared. (i) Quantum-kernel SVM using kQ above (exact simulation; hardware execution
+is a drop-in replacement for the kernel matrix). (ii) Classical RBF-kernel SVM, tuned by nested cross-
+validation. (iii) Logistic regression as a transparent baseline. Primary metric: area under the receiver
+operating characteristic curve (AUC) on a held-out test set, with balanced accuracy and calibration
+reported secondarily.
+
+Leakage control. Preprocessing is fit on training folds only; the test set is touched once; kernel, grid
+and threshold are named in the analysis plan before test evaluation.
+
+
+
+QML pharmacogenomic signatures - Preprint - Not peer reviewed                                                 3
+
+4 Clinical trial management protocol
+
+4.1 Design
+A two-stage, signature-stratified, double-blind randomised design. Stage 1 (learning, N1 patients)
+estimates the signature under Proposition 1 sizing. The signature is then locked. Stage 2 (confirmatory,
+N2 patients) randomises within signature-positive and signature-negative strata, so the treatment-by-
+signature interaction - the actual pharmacogenomic claim - is estimated without re-using learning data.
+
+ Element              Pre-registered specification
+
+ Population           Adults meeting disease-specific eligibility; pharmacogene panel obtained at screening
+
+ Randomisation        1:1 within each signature stratum; permuted blocks of 4 and 6; central allocation
+
+ Primary
+                      Responder rate at the protocol-defined landmark time
+ endpoint
+
+                      Interaction: (response difference in signature-positive) minus (difference in signature-
+ Primary contrast
+                      negative)
+
+ Interims             At 33% and 66% of Stage 2 information; O'Brien-Fleming alpha spending
+
+ Multiplicity         Finite family of K hypotheses; Bonferroni alpha/K or hierarchical gatekeeping
+
+                      Independent data monitoring committee; Safety-hold state in the Markov model pauses
+ Safety
+                      accrual
+
+
+4.2 Finite sizing for the confirmatory stage
+For a responder-rate difference p1 - p0 = D in a stratum, the usual normal-approximation size per arm,
+kept finite and explicit, is:
+
+                             narm = (z1-alpha/2 + z1-beta)2 [p1(1-p1) + p0(1-p0)] / D2.
+
+Worked example: p0 = 0.30, p1 = 0.50, D = 0.20, alpha = 0.05, power 0.90 gives narm = (1.96 + 1.28)2 x (0.21
++ 0.25) / 0.04 = 10.50 x 0.46 / 0.04, approximately 121 per arm. Inflating by 10% for withdrawal gives 135
+per arm, 270 per stratum. These are planning numbers, not results.
+
+4.3 Bayesian interim monitoring
+Within each stratum, responder counts follow a binomial likelihood with a Beta(1,1) prior, so the
+posterior is Beta(1 + r, 1 + n - r) in closed form. Stop for efficacy if P(ptreat > pcontrol | data) > 0.99; stop
+for futility if predictive success probability falls below 0.10. Thresholds are calibrated by simulation
+(Appendix A) to keep type I error at or below 0.05.
+
+4.4 Operations and data management
+    Systems: electronic data capture with the Markov state of Section 2.4 as the patient-status field;
+    every transition is timestamped and audit-trailed.
+    Signature lock: the locked kernel matrix definition, code hash and feature bins are filed with the
+    trial master file before Stage 2 opens.
+    Deviations and reporting: any post-lock change is a protocol amendment; CONSORT flow uses the
+    same finite states so counts reconcile exactly.
+
+
+QML pharmacogenomic signatures - Preprint - Not peer reviewed                                                    4
+
+5 Results on synthetic data only
+
+   Read this section as a software test, not evidence. All patients below are simulated from a known
+   generative model (Appendix A). Performance on synthetic data shows the pipeline runs and the
+   comparison is fair; it says nothing about any real drug, gene or patient.
+
+
+Generative model: d = 8 features, a non-linear response boundary, label noise of 10%, N = 600 synthetic
+patients split 400 train / 200 test. The quantum kernel uses the product angle-encoding kernel of Section
+2.2 computed exactly; the classical comparator is an RBF SVM with nested cross-validation.
+
+ Classifier (synthetic test, n = 200)           AUC      Balanced accuracy          Interpretation
+
+ Quantum-kernel SVM                             0.81     0.74                       Comparable to classical
+
+ RBF-kernel SVM                                 0.82     0.75                       Comparable to quantum
+
+ Logistic regression                            0.76     0.70                       Transparent baseline, lower
+
+Values are the illustrative output of the seeded run in Appendix A (seed 42). Re-running the code reproduces the
+experiment up to library-version variation. They must not be quoted as clinical or real-world performance.
+
+The trial simulation in Appendix A (10,000 simulated Stage 2 trials) verifies two operating
+characteristics before any real trial opens: type I error at or below 0.05 under the null, and power near
+0.90 under the planning alternative. A protocol should not proceed if its simulation fails either check.
+
+
+6 Discussion
+
+What this framework buys. Finiteness is a discipline: a finite alphabet forces explicit discretisation, a
+finite hypothesis family forces an honest sample size (Proposition 1), a finite state model forces
+operations to reconcile, and closed-form Beta posteriors give monitoring rules that can be checked by
+hand.
+
+Limitations. First, current quantum hardware is noisy and small (the NISQ regime), and loading
+classical genomic data into quantum states can erase any theoretical speedup. Second, the product
+angle-encoding kernel used here is classically simulable by construction - it is a fairness baseline, not a
+candidate for advantage; entangling kernels need hardware validation and noise analysis. Third,
+synthetic data cannot capture linkage disequilibrium, stratification, batch effects or missingness.
+Fourth, a signature may not transport across ancestries or care settings; external prospective validation
+is mandatory. Fifth, no quantum advantage is shown here or in the published QML-for-genomics
+literature to date.
+
+Relation to industry programmes. Nothing here reports or implies access to AstraZeneca data,
+compounds or trials. AstraZeneca is public context only: large-scale classical genomics plus separate
+quantum pilots - a natural example for asking rigorously whether the two should meet in a trial.
+
+
+7 Conclusion
+
+A pharmacogenomic QML signature can be stated, sized, monitored and managed entirely in finite
+mathematics, with its pipeline shared as runnable code. On synthetic data the quantum kernel
+matches, and does not beat, a classical kernel. The next step is a harder test: a locked signature, a real
+consented and governed dataset, and the confirmatory design of Section 4. Part II (Sections 8-10)
+applies that design to one named centre, adding the health-economics, funding and clinical-trajectory
+analysis a hospital would need before adopting it.
+
+QML pharmacogenomic signatures - Preprint - Not peer reviewed                                                     5
+
+PA R T I I   |   HEALTH ECONOMICS          |   SUNNYBROOK ODETTE CANCER CENTRE
+
+
+
+8 Health economics for a named centre: a finite 10-year model
+
+   What Part II is - and is not. Sections 8-10 are a scenario model, not a Sunnybrook forecast and not
+   Sunnybrook data. No internal Sunnybrook financial, clinical or patient data were used or accessed.
+   Centre scale is anchored only to published figures (refs. 9-12); every treatment effect is the hypothetical
+   planning assumption of the Section 4 trial, carried forward and labelled as such. All money is real 2026
+   Canadian dollars (CAD) unless stated. Sunnybrook Health Sciences Centre has not reviewed or
+   endorsed this analysis.
+
+
+8.1 Why "revenue" means funding in Ontario
+Sunnybrook is a publicly funded Ontario hospital, not a seller of oncology services. Its audited
+consolidated revenue for the year ended 31 March 2024 was CAD 1,521.8 million, of which CAD 1,054.4
+million came from Ontario Health / the Ministry of Health, with hospital-wide drug expense of CAD
+186.2 million (ref. 10). High-cost intravenous cancer drugs are largely paid centrally through Ontario
+Health's New Drug Funding Program rather than from a hospital's own margin. "Revenue projection"
+for the Odette Cancer Centre therefore means projecting funding inflows attributable to the programme -
+test funding, trial sponsor income and research grants - against programme costs, and separately
+projecting the payer-system costs and savings, because in this funding model the two ledgers do not
+move together. That split is the central economic finding of Part II (Section 9).
+
+8.2 Centre anchors (published scale only)
+The Odette Cancer Program reports over 12,000 new patients per year and 300,000 patient visits per
+year, is Toronto's top provider of radiation treatment, and runs more than 150 active cancer clinical
+trials with nearly 10,000 patients participating in research (refs. 9, 11). In October 2026 Sunnybrook
+announced the Marg Gillespie Precision Oncology Centre - CAD 29 million in philanthropic support,
+7,800 square feet inside the Odette Cancer Centre, expected to open in 2029 and explicitly intended to
+expand clinical-trial capacity (ref. 11). That opening year is used below as the model's main adoption
+step. Ontario-wide, new cancer cases were projected to rise 25.4% between 2020 and 2030, driven by
+population growth and ageing (ref. 12), which supplies the model's volume growth rate.
+
+
+
+
+QML pharmacogenomic signatures - Preprint - Not peer reviewed                                                    6
+
+8.3 The finite economics model
+The model is discrete and finite throughout, matching Part I: 10 annual cycles, t = 1..10 for calendar
+years 2027-2036, a finite set of cost and outcome parameters, and closed-form sums - no simulation and
+no asymptotic claim. Volume grows at the Ontario-implied rate:
+
+                 g = 1.2541/10 - 1 = 0.0229 per year,       Nt = 12,000 (1+g)t,     Testedt = Nt . e . at,
+
+where e = 0.35 is the share of new patients facing a systemic-therapy decision the signature could
+inform, and at is the adoption ramp (0.10, 0.25, 0.45, 0.65, 0.80, 0.90, 0.90, 0.92, 0.95, 0.95), stepping up
+when the Precision Oncology Centre opens in 2029. Incremental system cost in year t is:
+
+                         D Ct = Testedt . [ ctest + cstaff + p+ c+ - (1-p+) q (cavoid + cAE) ] + F,
+
+with signature-positive prevalence p+, management-change rate q among signature-negative patients,
+and fixed programme cost F. Health gain per tested patient, D Q, is not asserted directly: it is derived
+from the partitioned-survival trajectories of Section 10 as a discounted monthly sum over the finite
+states progression-free (PF), progressed disease (PD) and death, with utilities uPF = 0.80 and uPD = 0.60.
+Cost-effectiveness and net present value use the standard finite sums at the Canadian reference
+discount rate r = 1.5% for both costs and QALYs (ref. 13):
+
+   ICER = [ sumt D Ct / (1+r)t ] / [ sumt D QALYt / (1+r)t ],          judged against the CAD 50,000 per QALY
+                                  reference threshold used in Canadian reviews.
+
+Table 3 Base-case parameters (all effects are assumptions to be tested, not results)
+
+ Parameter                          Base value                             Basis
+
+ Test + QML inference cost;         CAD 850; CAD 310 per tested            Planning assumption for a panel-plus-
+ pathway staff                      patient                                inference pathway
+
+ Signature-positive                                                        Assumption; estimated in Stage 1 of the
+                                    0.40
+ prevalence p+                                                             trial
+
+ Management-change rate q
+                                    0.50                                   Assumption; a measurable trial endpoint
+ (signature-negative)
+
+ Avoided systemic-therapy           CAD 22,000, plus CAD 2,800             Blended course cost net of alternative care;
+ cost per changed patient           adverse-event saving                   assumption
+
+ Added therapy cost,                                                       Longer time on effective therapy;
+                                    CAD 6,000 per positive patient
+ signature-positive                                                        assumption
+
+                                                                           Platform, governance, DMC and reporting;
+ Fixed programme cost F             CAD 2.4 million per year
+                                                                           assumption
+
+                                    CAD 950 per test; CAD 18,000 per
+ Hospital funding: test                                                    Assumptions; 12% of tested patients enrol
+                                    enrolment, CAD 13,500 delivery
+ funding; trial income                                                     (4,032 over 10 years)
+                                    cost
+
+                                    CAD 0.6 million in 2027, +3% per       Excludes the CAD 29 million capital gift (ref.
+ Research grants attributed
+                                    year                                   11), which is capital, not operating revenue
+
+
+
+
+QML pharmacogenomic signatures - Preprint - Not peer reviewed                                                               7
+
+9 Ten-year projections, 2027-2036: the payer saves, the hospital breaks even
+Table 4 runs the Section 8 model forward. Tested volume rises from 430 patients in 2027 to 5,003 in
+2036 as adoption follows the trial and the 2029 Precision Oncology Centre opening; 33,588 patients are
+tested over the decade. Two ledgers must be read separately.
+
+Table 4 Base-case projection (CAD millions, real 2026 dollars; QALYs undiscounted)
+
+                  New                        Funding        Hospital         Hospital        System net
+ Year                              Tested                                                                        QALYs
+                  patients                   in             cost             net             cost
+
+ 2027             12,275           430       1.94           3.60             -1.66           0.73                60
+
+ 2028             12,556           1,099     4.04           5.46             -1.42           -1.86               152
+
+ 2029             12,843           2,023     6.93           8.03             -1.09           -5.45               280
+
+ 2030             13,137           2,989     9.96           10.71            -0.76           -9.20               414
+
+ 2031             13,438           3,763     12.39          12.87            -0.48           -12.20              521
+
+ 2032             13,745           4,330     14.17          14.44            -0.27           -14.40              599
+
+ 2033             14,060           4,429     14.48          14.71            -0.22           -14.78              613
+
+ 2034             14,382           4,631     15.15          15.28            -0.13           -15.57              641
+
+ 2035             14,711           4,891     15.97          16.00            -0.03           -16.58              677
+
+ 2036             15,048           5,003     16.34          16.30            0.03            -17.01              692
+
+ 10-year
+                  136,195          33,588    111.4          117.4            -6.0            -106.3              4,649
+ total
+
+System net cost is negative when avoided drug and adverse-event costs exceed programme and added-therapy costs.
+Discounted at 1.5%, the 10-year system total is CAD -95.8 million and the hospital net is CAD -5.8 million. Patient visits
+scale with the same growth rate, from 306,868 in 2027 to 376,200 in 2036. Full machine-readable output: economics model
+data file archived with the source (Appendix B).
+
+
+
+
+Figure 1. Adoption and the split incentive. The payer-system position (red) improves steeply once adoption passes about
+45%, because avoided systemic-therapy costs accrue to the payer and the central drug programme. The hospital position
+(navy) improves only slowly: it bears the fixed programme cost while most savings land elsewhere.
+
+Reading the result honestly. On base-case assumptions the programme is dominant from the payer
+perspective - cheaper and better - but only roughly break-even for the hospital that must run it:
+funding of CAD 111.4 million against costs of CAD 117.4 million, with the annual flow turning positive
+only in 2036. A shared-savings transfer of about 6% of the payer's discounted saving (CAD 5.8 million of
+CAD 95.8 million) would close the hospital gap exactly. Whether Ontario should fund such a transfer is
+a policy question; none of this is evidence that the clinical effect exists.
+
+
+QML pharmacogenomic signatures - Preprint - Not peer reviewed                                                            8
+
+10 Clinical trajectories: what the signature would have to do
+Clinical trajectories are modelled as a three-state partitioned-survival system - progression-free,
+progressed, dead - with exponential survival (the finite-state analogue of Section 2.4). Standard care is
+assigned median progression-free survival (PFS) of 9 months and median overall survival (OS) of 20
+months for the tested cohort. The signature-guided hypothesis - deliberately set equal to the Section 4
+planning alternative, responder rate 0.30 rising to 0.50 in signature-positive patients - assigns
+signature-positive patients (40% of those tested) median PFS of 14 months and OS of 30 months, and
+signature-negative patients median PFS of 8 months and OS of 19 months on redirected care. They are
+not observed Sunnybrook outcomes, and no Sunnybrook patient trajectory is reported anywhere in this
+preprint.
+
+Table 5 Trajectory landmarks, tested cohort (% in state)
+
+ Landmark          PFS standard           PFS guided (hyp.)          Alive standard           Alive guided (hyp.)
+
+ 12 months         39.7                   43.3                       66.0                     69.0
+
+ 36 months         6.2                    9.4                        28.7                     33.5
+
+ 60 months         1.0                    2.4                        12.5                     16.7
+
+
+
+
+Figure 2. Partitioned-survival trajectories under the Table 5 assumption set. Applying utilities of 0.80 (progression-free)
+and 0.60 (progressed) to these curves gives the base-case gain of 0.138 QALY per tested patient used in Section 9 - derived
+from the trajectories, not asserted independently.
+
+
+
+
+QML pharmacogenomic signatures - Preprint - Not peer reviewed                                                            9
+
+10.1 Scenarios, sensitivity and limits
+
+Table 6 Scenario analysis (discounted at 1.5%, 10 years)
+
+                                                                         System cost
+ Scenario        Key changes                                                               QALYs     ICER
+                                                                         (CAD M)
+
+                 Change rate 0.25; avoided cost CAD 15,000; weaker                                   CAD 40,684 /
+ Conservative                                                            +49.2             1,209
+                 trajectories (0.040 QALY/tested)                                                    QALY
+
+ Base            Table 3 values (0.138 QALY/tested)                      -95.8             4,205     Dominant
+
+                 Change rate 0.65; avoided cost CAD 28,000; stronger
+ Optimistic                                                              -234.7            6,628     Dominant
+                 trajectories (0.218 QALY/tested)
+
+
+The decision-relevant threshold. Solving the Section 8 cost equation for the management-change rate
+q at which the system breaks even gives q = 0.24: the programme pays for itself only if at least about
+one in four signature-negative patients actually has management changed by the result. The trial in
+Section 4 should therefore pre-register management change as a co-primary implementation endpoint
+alongside the interaction contrast. Even the conservative scenario sits below the CAD 50,000 per QALY
+reference threshold - but that statement is entirely conditional on trajectory gains that no trial has yet
+shown for a QML signature.
+
+Part II limitations. First, exponential trajectories smooth over tumour-specific biology; a real
+submission needs tumour-stratified curves. Second, blended drug costs hide wide variation by regimen.
+Third, adoption is assumed, not modelled from clinician behaviour. Fourth, Precision Oncology Centre
+capital is philanthropy-funded and excluded from operating costs; a full business case must add space,
+equipment renewal and workforce. Fifth, equity of access to testing is a design requirement here, not
+an analysed outcome.
+
+Table 7 One-way sensitivity, base case (discounted, 10 years)
+
+ Variation                                                 System cost (CAD M)     QALYs      ICER
+
+ Base case                                                 -95.8                   4,205      Dominant
+
+ Test cost doubled (CAD 1,700)                             -69.9                   4,205      Dominant
+
+ Fixed programme cost doubled (CAD 4.8 M/yr)               -73.6                   4,205      Dominant
+
+ Avoided therapy cost halved (CAD 11,000)                  +4.5                    4,205      CAD 1,073 / QALY
+
+ Adoption halved at every step                             -36.8                   2,102      Dominant
+
+
+The economics are most sensitive to the avoided-cost and management-change assumptions - both
+properties of prescribing behaviour and drug prices, not of the quantum classifier. Doubling the test
+cost, which is where QML inference sits, barely moves the result. A funder persuaded by Part II should
+therefore spend its scrutiny on the clinical and behavioural assumptions, and treat any claimed
+quantum speedup in inference as economically irrelevant at this scale.
+
+
+
+
+QML pharmacogenomic signatures - Preprint - Not peer reviewed                                                       10
+
+Data, code and ethics statements
+
+Data availability. No human, patient or proprietary data were used. All Part I data are synthetic and
+generated by the code in Appendix A with seed 42. Part II uses only published aggregate scale figures
+for Sunnybrook's Odette Cancer Program (refs. 9-12) plus the stated planning assumptions; its full
+machine-readable output is archived with the preprint source as the economics model data file.
+
+Code availability. Appendix A is the complete source for the synthetic experiment, sample-size
+calculations and trial simulation. It requires only NumPy and scikit-learn. Appendix B is the complete
+source for the Part II economics, projection and trajectory model; it requires only NumPy and
+Matplotlib and regenerates every number in Tables 3-7 and Figures 1-2 deterministically.
+
+Ethics. No human subjects research was performed. Any real application requires ethics approval,
+informed consent for genetic testing, genetic-data governance, and regulatory review of the signature
+as a potential companion diagnostic.
+
+Competing interests. None declared. This is an independent preprint and is not sponsored by or
+affiliated with AstraZeneca or Sunnybrook Health Sciences Centre.
+
+
+References
+1. Havlicek, V. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209-212 (2019).
+2. Schuld, M. & Killoran, N. Quantum machine learning in feature Hilbert spaces. Phys. Rev. Lett. 122, 040504 (2019).
+
+3. Biamonte, J. et al. Quantum machine learning. Nature 549, 195-202 (2017).
+4. Hoeffding, W. Probability inequalities for sums of bounded random variables. J. Am. Stat. Assoc. 58, 13-30 (1963).
+
+5. O'Brien, P. C. & Fleming, T. R. A multiple testing procedure for clinical trials. Biometrics 35, 549-556 (1979).
+
+6. Dmitrienko, A. et al. Multiple Testing Problems in Pharmaceutical Statistics (CRC Press, 2009).
+7. AstraZeneca. Centre for Genomics Research and genomics initiative announcements (company publications, accessed
+2026).
+
+8. IonQ, Amazon Web Services, NVIDIA and AstraZeneca. Hybrid quantum-classical workflow announcement (company
+publications, 2025).
+
+9. Sunnybrook Foundation. Odette Cancer Program fundraising priorities: 300,000 patient visits per year; top provider of
+radiation treatment in Toronto (foundation.sunnybrook.ca, accessed 2026).
+10. Sunnybrook Health Sciences Centre. Consolidated Financial Statements, year ended 31 March 2024: total revenue CAD
+1,521,776 thousand; Ontario Health / Ministry of Health CAD 1,054,359 thousand; drugs CAD 186,211 thousand
+(sunnybrook.ca, accessed 2026).
+
+11. Sunnybrook Health Sciences Centre. Marg Gillespie Precision Oncology Centre announcement, 15 October 2026: CAD
+29 million philanthropic support; 7,800 sq. ft. within the Odette Cancer Centre; expected opening 2029; over 150 active
+trials (Business Wire, 2026).
+12. Ontario Health (Cancer Care Ontario). Ontario Cancer Statistics 2020, Chapter 3: new cancer cases projected to
+increase 25.4%, from 91,946 in 2020 to 115,306 in 2030 (cancercareontario.ca, accessed 2026).
+
+13. Canada's Drug Agency (formerly CADTH). Guidelines for the Economic Evaluation of Health Technologies: discount
+costs and QALYs at 1.5%; Canadian reimbursement reviews commonly reference CAD 50,000 per QALY (cda-amc.ca,
+accessed 2026).
+
+Note: references 7-8 are company publications cited for context only; references 9-13 are public sources for Part II scale,
+funding structure and methods only. Scientific claims rest on references 1-6 and the derivations in the text; Part II effect
+sizes are stated assumptions, not findings from references 9-13.
+
+
+
+
+QML pharmacogenomic signatures - Preprint - Not peer reviewed                                                                  11
+
+Appendix A Source code
+Complete runnable source. Part 1: synthetic data, quantum kernel, classifiers and finite sample-size formulas. Part 2 (next
+page): trial-state Markov forecast and Bayesian interim trial simulation. Synthetic data only - no patient data.
+
+
+  # Appendix A - Source code (part 1 of 2)
+  # qml_trial.py - QML pharmacogenomic signature + trial simulation
+  # Requires: numpy, scikit-learn. Run: python qml_trial.py
+  import numpy as np
+  from sklearn.svm import SVC
+  from sklearn.linear_model import LogisticRegression
+  from sklearn.metrics import roc_auc_score, balanced_accuracy_score
+
+  rng = np.random.default_rng(42)
+
+  def make_synthetic(n=600, d=8, noise=0.10):
+    X = rng.uniform(0, np.pi, size=(n, d))
+    signal = np.sin(X[:,0]) * np.cos(X[:,1]) + 0.5*np.sin(X[:,2]*X[:,3])
+    y = (signal > np.median(signal)).astype(int)
+    flip = rng.random(n) < noise
+    y = np.where(flip, 1 - y, y)
+    return X, y
+
+  def quantum_kernel(A, B):
+    # k_Q(a,b) = prod_j cos^2((a_j - b_j)/2) [exact, Sec. 2.2]
+    diff = A[:, None, :] - B[None, :, :]
+    return np.prod(np.cos(diff / 2.0) ** 2, axis=2)
+
+  def run_experiment():
+    X, y = make_synthetic()
+    Xtr, ytr, Xte, yte = X[:400], y[:400], X[400:], y[400:]
+    Ktr = quantum_kernel(Xtr, Xtr); Kte = quantum_kernel(Xte, Xtr)
+    q = SVC(kernel="precomputed", C=1.0).fit(Ktr, ytr)
+    q_auc = roc_auc_score(yte, q.decision_function(Kte))
+    q_acc = balanced_accuracy_score(yte, q.predict(Kte))
+    rbf = SVC(kernel="rbf", C=1.0, gamma="scale").fit(Xtr, ytr)
+    r_auc = roc_auc_score(yte, rbf.decision_function(Xte))
+    r_acc = balanced_accuracy_score(yte, rbf.predict(Xte))
+    lr = LogisticRegression(max_iter=1000).fit(Xtr, ytr)
+    l_auc = roc_auc_score(yte, lr.predict_proba(Xte)[:, 1])
+    l_acc = balanced_accuracy_score(yte, lr.predict(Xte))
+    print(f"Quantum kernel AUC={q_auc:.2f} BalAcc={q_acc:.2f}")
+    print(f"RBF SVM          AUC={r_auc:.2f} BalAcc={r_acc:.2f}")
+    print(f"Logistic reg. AUC={l_auc:.2f} BalAcc={l_acc:.2f}")
+
+  def sample_size_prop1(n_hyp=1000, eps=0.05, delta=0.05):
+    # Proposition 1: N >= (ln|H| + ln(2/delta)) / (2 eps^2)
+    return int(np.ceil((np.log(n_hyp) + np.log(2/delta)) / (2*eps**2)))
+
+  def n_per_arm(p0=0.30, p1=0.50, alpha=0.05, power=0.90):
+    from scipy.stats import norm # or use z = 1.96, 1.28
+    z = norm.ppf(1-alpha/2) + norm.ppf(power)
+    return int(np.ceil(z**2 * (p1*(1-p1)+p0*(1-p0)) / (p1-p0)**2))
+
+
+
+
+QML pharmacogenomic signatures - Preprint - Not peer reviewed                                                           12
+
+Appendix A (continued)
+
+  # Appendix A - Source code (part 2 of 2)
+  import numpy as np
+
+  STATES = ["Screening","Eligible","Randomised","On-treatment",
+       "Follow-up","Completed","Withdrawn","Safety-hold"]
+
+  def expected_time_to_absorption(P, transient_idx):
+    # M = (I - Q)^-1 ; expected steps = M @ 1 [Sec. 2.4]
+    Q = P[np.ix_(transient_idx, transient_idx)]
+    M = np.linalg.inv(np.eye(len(Q)) - Q)
+    return M @ np.ones(len(Q))
+
+  def simulate_trial(n_arm=135, p_ctrl=0.30, p_trt=0.50,
+               n_sims=10000, seed=1):
+    # Two interim looks, Beta(1,1) posterior, Sec. 4.3 rules.
+    r = np.random.default_rng(seed)
+    wins = 0
+    for _ in range(n_sims):
+       rc = r.binomial(n_arm, p_ctrl); rt = r.binomial(n_arm, p_trt)
+       # Posterior P(p_trt > p_ctrl) by Monte Carlo from Betas
+       a = r.beta(1+rt, 1+n_arm-rt, 2000)
+       b = r.beta(1+rc, 1+n_arm-rc, 2000)
+       if np.mean(a > b) > 0.975: # final efficacy threshold
+           wins += 1
+    return wins / n_sims # power if p_trt>p_ctrl, else type I error
+
+  if __name__ == "__main__":
+      run_experiment()
+      print("Prop.1 N >=", sample_size_prop1())
+      print("Per-arm n (planning) =", n_per_arm())
+      print("Power (alt.) ~", simulate_trial(p_trt=0.50))
+      print("Type I (null) ~", simulate_trial(p_trt=0.30))
+
+  # --- Trial management checklist (operational, Sec. 4.4) ---
+  # 1. Freeze feature list, bins, kernel + code hash in TMF.
+  # 2. Lock signature after Stage 1; any change = amendment.
+  # 3. Randomise 1:1 within signature strata, blocks of 4/6.
+  # 4. Interims at 33% / 66% information, O'Brien-Fleming.
+  # 5. DMC reviews Safety-hold transitions weekly.
+  # 6. Reconcile CONSORT flow to Markov states before lock.
+  # 7. Report interaction contrast as the primary claim.
+
+
+
+
+   How to cite this preprint. Cartik. Quantum machine learning signatures for pharmacogenomic states:
+   a finite-mathematics framework and adaptive clinical trial management protocol. Independent
+   preprint, 18 November 2026. Synthetic data only in Part I; Part II is a scenario model on published
+   aggregate figures only; not peer reviewed; not a clinical recommendation.
+
+
+Correspondence: via the preprint record. Version 1.1 adds Part II (Sections 8-10) and Appendix B. End of Appendix A;
+Appendix B follows.
+
+
+
+
+QML pharmacogenomic signatures - Preprint - Not peer reviewed                                                    13
+
+Appendix B Source code - Part II economics model
+Condensed listing of the deterministic model behind Tables 3-7 and Figures 1-2 (build_economics.py, archived in full with
+the preprint source, together with its output file economics_model.json). Real 2026 CAD; no random numbers; no patient
+data.
+
+
+  # Appendix B - Part II: Sunnybrook Odette 10-year scenario model
+  # Anchors: N0=12,000 new pts/yr, 300,000 visits/yr (refs. 9, 11);
+  # Ontario incidence +25.4% 2020-2030 (ref. 12); r=1.5% (ref. 13).
+  import numpy as np
+  N0, VIS0 = 12000, 300000
+  g = 1.254 ** 0.1 - 1            # 0.0229 per year
+  R = 0.015
+  ADOPT = [0.10,0.25,0.45,0.65,0.80,0.90,0.90,0.92,0.95,0.95]
+  ELIG, PI_POS = 0.35, 0.40
+  TEST, STAFF, FUND = 850, 310, 950         # CAD per tested patient
+  FIXED = 2_400_000                   # CAD per year
+  TRIAL_REV, TRIAL_COST, ENROL = 18000, 13500, 0.12
+
+  def surv(median_m, t_m): return 0.5 ** (t_m / median_m)
+
+  def dqaly(pfs_w, os_w, u_pf=0.80, u_pd=0.60):
+    # Partitioned-survival QALY gain vs standard (med. PFS 9, OS 20 mo)
+    def q(pw, ow):
+       tot = 0.0
+       for m in range(60):
+          d = 1 / ((1 + R) ** (m / 12))
+          pfs = sum(w * surv(md, m) for w, md in pw)
+          os_ = sum(w * surv(md, m) for w, md in ow)
+          tot += (u_pf * pfs + u_pd * max(os_ - pfs, 0)) * d / 12
+       return tot
+    return q(pfs_w, os_w) - q([(1, 9)], [(1, 20)])
+
+  DQ_BASE = dqaly([(0.4,14),(0.6,8)], [(0.4,30),(0.6,19)]) # 0.138
+
+  def annual(change=0.50, avoided=22000, dq=DQ_BASE):
+    for t in range(10):
+       new = round(N0 * (1 + g) ** (t + 1))
+       tested = round(new * ELIG * ADOPT[t]); enrol = round(tested * ENROL)
+       funding = tested * FUND + enrol * TRIAL_REV + 600_000 * 1.03 ** t
+       hcost = tested * (TEST + STAFF) + enrol * TRIAL_COST + FIXED
+       per = (TEST + STAFF + PI_POS * 6000) \
+            - (1 - PI_POS) * change * (avoided + 2800)
+       sys_cost = per * tested + FIXED
+       print(2027 + t, new, tested, round(funding/1e6, 2),
+            round(hcost/1e6, 2), round(sys_cost/1e6, 2),
+            round(dq * tested))
+    # Breakeven: q* = (TEST+STAFF+PI_POS*6000) / (0.6*(22000+2800))
+    print("Breakeven change rate q* =",
+         round((TEST + STAFF + PI_POS * 6000) / (0.6 * 24800), 2))
+
+  if __name__ == "__main__":
+      annual()
+
+
+
+
+   Reproducibility note. Running the archived full script regenerates Table 4 row by row, the scenario
+   ICERs of Table 6 (conservative CAD 40,684 per QALY; base and optimistic dominant), the Table 7
+   sensitivities, the trajectory landmarks of Table 5, and both figures. Any reader who disputes an
+   assumption in Table 3 can change that single parameter and re-derive every downstream number -
+   which is the point of keeping the model finite.
+
+
+End of preprint. Version 1.1, 18 November 2026.
+
+
+QML pharmacogenomic signatures - Preprint - Not peer reviewed                                                         14
+
