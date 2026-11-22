@@ -1,0 +1,210 @@
+{
+ "growth_pct": 2.29,
+ "dqaly": {
+  "conservative": 0.04,
+  "base": 0.138,
+  "optimistic": 0.218
+ },
+ "rows": [
+  {
+   "year": 2027,
+   "new": 12275,
+   "visits": 306868,
+   "tested": 430,
+   "enrol": 52,
+   "funding_M": 1.94,
+   "hcost_M": 3.6,
+   "hnet_M": -1.66,
+   "hcum_M": -1.66,
+   "sys_M": 0.73,
+   "qaly": 60
+  },
+  {
+   "year": 2028,
+   "new": 12556,
+   "visits": 313892,
+   "tested": 1099,
+   "enrol": 132,
+   "funding_M": 4.04,
+   "hcost_M": 5.46,
+   "hnet_M": -1.42,
+   "hcum_M": -3.08,
+   "sys_M": -1.86,
+   "qaly": 152
+  },
+  {
+   "year": 2029,
+   "new": 12843,
+   "visits": 321078,
+   "tested": 2023,
+   "enrol": 243,
+   "funding_M": 6.93,
+   "hcost_M": 8.03,
+   "hnet_M": -1.09,
+   "hcum_M": -4.17,
+   "sys_M": -5.45,
+   "qaly": 280
+  },
+  {
+   "year": 2030,
+   "new": 13137,
+   "visits": 328428,
+   "tested": 2989,
+   "enrol": 359,
+   "funding_M": 9.96,
+   "hcost_M": 10.71,
+   "hnet_M": -0.76,
+   "hcum_M": -4.93,
+   "sys_M": -9.2,
+   "qaly": 414
+  },
+  {
+   "year": 2031,
+   "new": 13438,
+   "visits": 335946,
+   "tested": 3763,
+   "enrol": 452,
+   "funding_M": 12.39,
+   "hcost_M": 12.87,
+   "hnet_M": -0.48,
+   "hcum_M": -5.41,
+   "sys_M": -12.2,
+   "qaly": 521
+  },
+  {
+   "year": 2032,
+   "new": 13745,
+   "visits": 343637,
+   "tested": 4330,
+   "enrol": 520,
+   "funding_M": 14.17,
+   "hcost_M": 14.44,
+   "hnet_M": -0.27,
+   "hcum_M": -5.68,
+   "sys_M": -14.4,
+   "qaly": 599
+  },
+  {
+   "year": 2033,
+   "new": 14060,
+   "visits": 351503,
+   "tested": 4429,
+   "enrol": 531,
+   "funding_M": 14.48,
+   "hcost_M": 14.71,
+   "hnet_M": -0.22,
+   "hcum_M": -5.91,
+   "sys_M": -14.78,
+   "qaly": 613
+  },
+  {
+   "year": 2034,
+   "new": 14382,
+   "visits": 359550,
+   "tested": 4631,
+   "enrol": 556,
+   "funding_M": 15.15,
+   "hcost_M": 15.28,
+   "hnet_M": -0.13,
+   "hcum_M": -6.04,
+   "sys_M": -15.57,
+   "qaly": 641
+  },
+  {
+   "year": 2035,
+   "new": 14711,
+   "visits": 367781,
+   "tested": 4891,
+   "enrol": 587,
+   "funding_M": 15.97,
+   "hcost_M": 16.0,
+   "hnet_M": -0.03,
+   "hcum_M": -6.06,
+   "sys_M": -16.58,
+   "qaly": 677
+  },
+  {
+   "year": 2036,
+   "new": 15048,
+   "visits": 376200,
+   "tested": 5003,
+   "enrol": 600,
+   "funding_M": 16.34,
+   "hcost_M": 16.3,
+   "hnet_M": 0.03,
+   "hcum_M": -6.03,
+   "sys_M": -17.01,
+   "qaly": 692
+  }
+ ],
+ "scenarios": {
+  "conservative": {
+   "cost_disc_M": 49.2,
+   "qaly": 1209,
+   "icer": 40684
+  },
+  "base": {
+   "cost_disc_M": -95.8,
+   "qaly": 4205,
+   "icer": "Dominant"
+  },
+  "optimistic": {
+   "cost_disc_M": -234.7,
+   "qaly": 6628,
+   "icer": "Dominant"
+  }
+ },
+ "cum_sys_disc_M": -95.8,
+ "cum_hosp_disc_M": -5.8,
+ "sensitivity": {
+  "test_cost_x2": {
+   "cost_disc_M": -69.9,
+   "qaly": 4205,
+   "icer": "Dominant"
+  },
+  "fixed_x2": {
+   "cost_disc_M": -73.6,
+   "qaly": 4205,
+   "icer": "Dominant"
+  },
+  "avoided_halved": {
+   "cost_disc_M": 4.5,
+   "qaly": 4205,
+   "icer": 1073
+  },
+  "adoption_halved": {
+   "cost_disc_M": -36.8,
+   "qaly": 2102,
+   "icer": "Dominant"
+  }
+ },
+ "traj": {
+  "12": {
+   "pfs_std": 39.7,
+   "pfs_gui": 43.3,
+   "os_std": 66.0,
+   "os_gui": 69.0
+  },
+  "36": {
+   "pfs_std": 6.2,
+   "pfs_gui": 9.4,
+   "os_std": 28.7,
+   "os_gui": 33.5
+  },
+  "60": {
+   "pfs_std": 1.0,
+   "pfs_gui": 2.4,
+   "os_std": 12.5,
+   "os_gui": 16.7
+  }
+ },
+ "totals": {
+  "tested": 33588,
+  "enrol": 4032,
+  "qaly": 4649,
+  "funding_M": 111.4,
+  "hcost_M": 117.4,
+  "hnet_M": -6.0,
+  "sys_M": -106.3
+ }
+}

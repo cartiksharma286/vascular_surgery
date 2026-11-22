@@ -1,0 +1,1148 @@
+{
+  "ok": true,
+  "pdf": "/home/hatch/workspace/your_files/quantum-kernel-soft-tissue-modelling-preprint/quantum-kernel-soft-tissue-modelling-preprint.pdf",
+  "pages": 0,
+  "pngs": [],
+  "fonts": {
+    "missing": [],
+    "unused": [],
+    "used": [
+      "Noto Serif",
+      "Liberation Mono",
+      "Noto Sans",
+      "Liberation Serif",
+      "DejaVu Sans",
+      "Noto Sans Math"
+    ],
+    "expected": [
+      "Noto Serif:400",
+      "Noto Serif:700",
+      "Noto Sans:400",
+      "Noto Sans:700",
+      "Liberation Mono:400"
+    ]
+  },
+  "overflow": [],
+  "text_floor": [
+    {
+      "index": 0,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 50,
+          "max_node_chars": 49,
+          "sample": "Nature-style preprint  |  Not peer revie"
+        },
+        {
+          "pt": 8.4,
+          "chars": 25,
+          "max_node_chars": 6,
+          "sample": "j=1"
+        },
+        {
+          "pt": 8.5,
+          "chars": 374,
+          "max_node_chars": 184,
+          "sample": "Independent preprint • Version 1.2 • 22 "
+        },
+        {
+          "pt": 8.7,
+          "chars": 286,
+          "max_node_chars": 271,
+          "sample": "Scope statement."
+        },
+        {
+          "pt": 8.8,
+          "chars": 1,
+          "max_node_chars": 1,
+          "sample": "6"
+        },
+        {
+          "pt": 9.3,
+          "chars": 1630,
+          "max_node_chars": 538,
+          "sample": "Abstract."
+        },
+        {
+          "pt": 9.8,
+          "chars": 1231,
+          "max_node_chars": 473,
+          "sample": "A vascular case is routinely summarised "
+        },
+        {
+          "pt": 11,
+          "chars": 147,
+          "max_node_chars": 147,
+          "sample": "A finite-mathematics framework joining a"
+        },
+        {
+          "pt": 12.5,
+          "chars": 35,
+          "max_node_chars": 35,
+          "sample": "1   Two finite descriptors, one case rec"
+        },
+        {
+          "pt": 21,
+          "chars": 85,
+          "max_node_chars": 85,
+          "sample": "Quantum kernel scoring coupled to finite"
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 13,
+          "max_node_chars": 3,
+          "sample": "(1)"
+        },
+        {
+          "pt": 8.8,
+          "chars": 22,
+          "max_node_chars": 3,
+          "sample": "1"
+        },
+        {
+          "pt": 9.5,
+          "chars": 34,
+          "max_node_chars": 3,
+          "sample": "j"
+        },
+        {
+          "pt": 9.8,
+          "chars": 1510,
+          "max_node_chars": 333,
+          "sample": "Each case is reduced to six normalised f"
+        },
+        {
+          "pt": 10.5,
+          "chars": 291,
+          "max_node_chars": 40,
+          "sample": "2.1   Six features, six qubits"
+        },
+        {
+          "pt": 12.5,
+          "chars": 23,
+          "max_node_chars": 23,
+          "sample": "2   The finite quantum kernel"
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 4,
+          "max_node_chars": 3,
+          "sample": "(5)"
+        },
+        {
+          "pt": 9.5,
+          "chars": 4,
+          "max_node_chars": 3,
+          "sample": "RBF"
+        },
+        {
+          "pt": 9.8,
+          "chars": 752,
+          "max_node_chars": 315,
+          "sample": "Every kernel result is reported beside a"
+        },
+        {
+          "pt": 10.5,
+          "chars": 90,
+          "max_node_chars": 43,
+          "sample": "2.4   Classical comparator"
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 21,
+          "max_node_chars": 4,
+          "sample": "(6)"
+        },
+        {
+          "pt": 8.8,
+          "chars": 16,
+          "max_node_chars": 2,
+          "sample": "θ"
+        },
+        {
+          "pt": 9.5,
+          "chars": 51,
+          "max_node_chars": 4,
+          "sample": "z"
+        },
+        {
+          "pt": 9.8,
+          "chars": 1427,
+          "max_node_chars": 362,
+          "sample": "The vessel is a circular cylinder inflat"
+        },
+        {
+          "pt": 10.5,
+          "chars": 258,
+          "max_node_chars": 43,
+          "sample": "3.1   Kinematics of inflation"
+        },
+        {
+          "pt": 12.5,
+          "chars": 35,
+          "max_node_chars": 35,
+          "sample": "3   Finite hyperelastic soft-tissue mode"
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 17,
+          "max_node_chars": 4,
+          "sample": "(12)"
+        },
+        {
+          "pt": 8.8,
+          "chars": 10,
+          "max_node_chars": 1,
+          "sample": "d"
+        },
+        {
+          "pt": 9.5,
+          "chars": 22,
+          "max_node_chars": 1,
+          "sample": "s"
+        },
+        {
+          "pt": 9.8,
+          "chars": 1306,
+          "max_node_chars": 473,
+          "sample": "Let D"
+        },
+        {
+          "pt": 10.5,
+          "chars": 207,
+          "max_node_chars": 41,
+          "sample": "3.4   Characteristics reported by the si"
+        },
+        {
+          "pt": 12.5,
+          "chars": 35,
+          "max_node_chars": 35,
+          "sample": "4   Coupled descriptor and finite workfl"
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 1,
+          "max_node_chars": 1,
+          "sample": "6"
+        },
+        {
+          "pt": 8.1,
+          "chars": 187,
+          "max_node_chars": 15,
+          "sample": "Preset"
+        },
+        {
+          "pt": 8.3,
+          "chars": 88,
+          "max_node_chars": 88,
+          "sample": "Table 1 | Tissue preset parameters. Synt"
+        },
+        {
+          "pt": 8.8,
+          "chars": 1,
+          "max_node_chars": 1,
+          "sample": "0"
+        },
+        {
+          "pt": 9.8,
+          "chars": 710,
+          "max_node_chars": 231,
+          "sample": "Tissue presets."
+        },
+        {
+          "pt": 12.5,
+          "chars": 19,
+          "max_node_chars": 19,
+          "sample": "5   Experiments: design"
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "runs": [
+        {
+          "pt": 7.3,
+          "chars": 3,
+          "max_node_chars": 1,
+          "sample": "s"
+        },
+        {
+          "pt": 8,
+          "chars": 1,
+          "max_node_chars": 1,
+          "sample": "7"
+        },
+        {
+          "pt": 8.1,
+          "chars": 324,
+          "max_node_chars": 15,
+          "sample": "Preset"
+        },
+        {
+          "pt": 8.2,
+          "chars": 338,
+          "max_node_chars": 236,
+          "sample": "Figure 1 | Finite hyperelastic response."
+        },
+        {
+          "pt": 8.3,
+          "chars": 93,
+          "max_node_chars": 93,
+          "sample": "Table 2 | Computed characteristics at 80"
+        },
+        {
+          "pt": 9.8,
+          "chars": 883,
+          "max_node_chars": 320,
+          "sample": "The AAA preset has only the second-large"
+        },
+        {
+          "pt": 10.5,
+          "chars": 54,
+          "max_node_chars": 54,
+          "sample": "6.1   Mechanics: radius, not stiffness a"
+        },
+        {
+          "pt": 12.5,
+          "chars": 8,
+          "max_node_chars": 8,
+          "sample": "6   Results"
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "runs": [
+        {
+          "pt": 7.4,
+          "chars": 1,
+          "max_node_chars": 1,
+          "sample": "0"
+        },
+        {
+          "pt": 8,
+          "chars": 1,
+          "max_node_chars": 1,
+          "sample": "8"
+        },
+        {
+          "pt": 8.1,
+          "chars": 430,
+          "max_node_chars": 23,
+          "sample": "Archetype"
+        },
+        {
+          "pt": 8.2,
+          "chars": 331,
+          "max_node_chars": 159,
+          "sample": "Figure 2 | Kernel scoring and heartbeat "
+        },
+        {
+          "pt": 8.3,
+          "chars": 144,
+          "max_node_chars": 144,
+          "sample": "Table 3 | Quantum kernel similarities to"
+        },
+        {
+          "pt": 9.8,
+          "chars": 994,
+          "max_node_chars": 460,
+          "sample": "Three archetypes sit near a prototype (A"
+        },
+        {
+          "pt": 10.5,
+          "chars": 56,
+          "max_node_chars": 56,
+          "sample": "6.2   Kernel: clean separation on archet"
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 1,
+          "max_node_chars": 1,
+          "sample": "9"
+        },
+        {
+          "pt": 8.8,
+          "chars": 5,
+          "max_node_chars": 1,
+          "sample": "s"
+        },
+        {
+          "pt": 9.8,
+          "chars": 2891,
+          "max_node_chars": 443,
+          "sample": "The framework's contribution is auditabi"
+        },
+        {
+          "pt": 12.5,
+          "chars": 31,
+          "max_node_chars": 12,
+          "sample": "7   Discussion"
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 15,
+          "max_node_chars": 5,
+          "sample": "(16a)"
+        },
+        {
+          "pt": 8.8,
+          "chars": 25,
+          "max_node_chars": 5,
+          "sample": "e"
+        },
+        {
+          "pt": 9.5,
+          "chars": 48,
+          "max_node_chars": 5,
+          "sample": "ref"
+        },
+        {
+          "pt": 9.8,
+          "chars": 2162,
+          "max_node_chars": 711,
+          "sample": "Added in Version 1.1."
+        },
+        {
+          "pt": 10.5,
+          "chars": 307,
+          "max_node_chars": 63,
+          "sample": "10.1   Mesh, lesion profile and governin"
+        },
+        {
+          "pt": 12.5,
+          "chars": 67,
+          "max_node_chars": 67,
+          "sample": "10   Finite element simulation of minima"
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 10,
+          "max_node_chars": 4,
+          "sample": "(18)"
+        },
+        {
+          "pt": 8.1,
+          "chars": 486,
+          "max_node_chars": 42,
+          "sample": "Quantity"
+        },
+        {
+          "pt": 8.3,
+          "chars": 157,
+          "max_node_chars": 157,
+          "sample": "Table 4 | Computed finite element expans"
+        },
+        {
+          "pt": 8.8,
+          "chars": 36,
+          "max_node_chars": 3,
+          "sample": "dev"
+        },
+        {
+          "pt": 9.5,
+          "chars": 23,
+          "max_node_chars": 3,
+          "sample": "i"
+        },
+        {
+          "pt": 9.8,
+          "chars": 1704,
+          "max_node_chars": 337,
+          "sample": "A device of nominal diameter D"
+        },
+        {
+          "pt": 10.5,
+          "chars": 187,
+          "max_node_chars": 37,
+          "sample": "10.3   Device load and contact cap"
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 2,
+          "max_node_chars": 2,
+          "sample": "12"
+        },
+        {
+          "pt": 8.2,
+          "chars": 552,
+          "max_node_chars": 293,
+          "sample": "Figure 3 | Finite element expansion (Sec"
+        },
+        {
+          "pt": 9.8,
+          "chars": 1270,
+          "max_node_chars": 865,
+          "sample": "Three features of Table 4 are structural"
+        },
+        {
+          "pt": 10.5,
+          "chars": 26,
+          "max_node_chars": 26,
+          "sample": "10.5   What the comparison shows"
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 2,
+          "max_node_chars": 2,
+          "sample": "13"
+        },
+        {
+          "pt": 8.1,
+          "chars": 357,
+          "max_node_chars": 23,
+          "sample": "Variant"
+        },
+        {
+          "pt": 8.3,
+          "chars": 115,
+          "max_node_chars": 115,
+          "sample": "Table 5 | Design-space variants around T"
+        },
+        {
+          "pt": 8.8,
+          "chars": 4,
+          "max_node_chars": 3,
+          "sample": "dev"
+        },
+        {
+          "pt": 9.8,
+          "chars": 2382,
+          "max_node_chars": 473,
+          "sample": "Reading Table 4 as a designer rather tha"
+        },
+        {
+          "pt": 10.5,
+          "chars": 50,
+          "max_node_chars": 50,
+          "sample": "10.6   Design implications for balloon c"
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 2,
+          "max_node_chars": 2,
+          "sample": "14"
+        },
+        {
+          "pt": 8.2,
+          "chars": 289,
+          "max_node_chars": 134,
+          "sample": "Figure 4 | Design-space summary (Table 5"
+        },
+        {
+          "pt": 8.8,
+          "chars": 1,
+          "max_node_chars": 1,
+          "sample": "y"
+        },
+        {
+          "pt": 9.8,
+          "chars": 1328,
+          "max_node_chars": 241,
+          "sample": "One-dimensional ring elements."
+        },
+        {
+          "pt": 10.5,
+          "chars": 45,
+          "max_node_chars": 45,
+          "sample": "10.7   Limits of the finite element and "
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 6,
+          "max_node_chars": 4,
+          "sample": "(20)"
+        },
+        {
+          "pt": 8.1,
+          "chars": 317,
+          "max_node_chars": 31,
+          "sample": "Driver"
+        },
+        {
+          "pt": 8.3,
+          "chars": 128,
+          "max_node_chars": 128,
+          "sample": "Table 6 | Unit economics and drivers, sc"
+        },
+        {
+          "pt": 8.8,
+          "chars": 5,
+          "max_node_chars": 1,
+          "sample": "t"
+        },
+        {
+          "pt": 9.5,
+          "chars": 9,
+          "max_node_chars": 1,
+          "sample": "t"
+        },
+        {
+          "pt": 9.8,
+          "chars": 1097,
+          "max_node_chars": 427,
+          "sample": "Sections 2-10 price nothing. This sectio"
+        },
+        {
+          "pt": 10.5,
+          "chars": 54,
+          "max_node_chars": 36,
+          "sample": "11.1   Revenue identity and cost compone"
+        },
+        {
+          "pt": 12.5,
+          "chars": 55,
+          "max_node_chars": 55,
+          "sample": "11   Health economics: costs, revenue an"
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 10,
+          "max_node_chars": 4,
+          "sample": "(21)"
+        },
+        {
+          "pt": 8.8,
+          "chars": 3,
+          "max_node_chars": 1,
+          "sample": "2"
+        },
+        {
+          "pt": 9.5,
+          "chars": 3,
+          "max_node_chars": 1,
+          "sample": "w"
+        },
+        {
+          "pt": 9.8,
+          "chars": 1914,
+          "max_node_chars": 494,
+          "sample": "Provider revenue is a payer cost, so a h"
+        },
+        {
+          "pt": 10.5,
+          "chars": 226,
+          "max_node_chars": 84,
+          "sample": "11.2   Payer perspective: what a case mu"
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 6,
+          "max_node_chars": 4,
+          "sample": "(23)"
+        },
+        {
+          "pt": 8.1,
+          "chars": 286,
+          "max_node_chars": 26,
+          "sample": "Line"
+        },
+        {
+          "pt": 8.2,
+          "chars": 307,
+          "max_node_chars": 257,
+          "sample": "Figure 5 | Three-year revenue trajectory"
+        },
+        {
+          "pt": 8.3,
+          "chars": 112,
+          "max_node_chars": 112,
+          "sample": "Table 7 | Three-year trajectory, scale s"
+        },
+        {
+          "pt": 9.5,
+          "chars": 5,
+          "max_node_chars": 1,
+          "sample": "t"
+        },
+        {
+          "pt": 9.8,
+          "chars": 683,
+          "max_node_chars": 348,
+          "sample": "Applying the fitted ridge model to the p"
+        },
+        {
+          "pt": 10.5,
+          "chars": 76,
+          "max_node_chars": 57,
+          "sample": "11.4   Three-year trajectory: accounting"
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 2,
+          "max_node_chars": 2,
+          "sample": "18"
+        },
+        {
+          "pt": 8.1,
+          "chars": 162,
+          "max_node_chars": 23,
+          "sample": "Scenario"
+        },
+        {
+          "pt": 8.3,
+          "chars": 94,
+          "max_node_chars": 94,
+          "sample": "Table 8 | Scenario spread. Same identity"
+        },
+        {
+          "pt": 8.7,
+          "chars": 250,
+          "max_node_chars": 227,
+          "sample": "Economic scope statement."
+        },
+        {
+          "pt": 8.8,
+          "chars": 2,
+          "max_node_chars": 1,
+          "sample": "t"
+        },
+        {
+          "pt": 9.8,
+          "chars": 1591,
+          "max_node_chars": 355,
+          "sample": "Decomposing the Year 1 to Year 3 growth "
+        },
+        {
+          "pt": 10.5,
+          "chars": 76,
+          "max_node_chars": 48,
+          "sample": "11.5   What carries revenue past USD 100"
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 2,
+          "max_node_chars": 2,
+          "sample": "19"
+        },
+        {
+          "pt": 8.1,
+          "chars": 1829,
+          "max_node_chars": 1829,
+          "sample": "import numpy as np\nrng = np.random.defau"
+        },
+        {
+          "pt": 9.8,
+          "chars": 176,
+          "max_node_chars": 176,
+          "sample": "Condensed form of the Section 11 generat"
+        },
+        {
+          "pt": 12.5,
+          "chars": 70,
+          "max_node_chars": 70,
+          "sample": "Appendix D   Health-economics and machin"
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 2,
+          "max_node_chars": 2,
+          "sample": "20"
+        },
+        {
+          "pt": 8.1,
+          "chars": 1521,
+          "max_node_chars": 1521,
+          "sample": "# --- gradient boosting, depth-2 trees, "
+        },
+        {
+          "pt": 8.7,
+          "chars": 220,
+          "max_node_chars": 209,
+          "sample": "Version 1.2."
+        },
+        {
+          "pt": 9.8,
+          "chars": 188,
+          "max_node_chars": 188,
+          "sample": "Figure 5 is plotted from the accounting "
+        },
+        {
+          "pt": 12.5,
+          "chars": 49,
+          "max_node_chars": 49,
+          "sample": "Appendix D (continued)   Boosting compar"
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 2,
+          "max_node_chars": 2,
+          "sample": "21"
+        },
+        {
+          "pt": 8.6,
+          "chars": 1434,
+          "max_node_chars": 137,
+          "sample": "1. Havlicek, V. et al. Supervised learni"
+        },
+        {
+          "pt": 9.8,
+          "chars": 573,
+          "max_node_chars": 387,
+          "sample": "All data in this preprint are synthetic "
+        },
+        {
+          "pt": 12.5,
+          "chars": 70,
+          "max_node_chars": 37,
+          "sample": "References"
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 2,
+          "max_node_chars": 2,
+          "sample": "22"
+        },
+        {
+          "pt": 8.1,
+          "chars": 965,
+          "max_node_chars": 965,
+          "sample": "import math\nMMHG = 0.133322  # kPa per m"
+        },
+        {
+          "pt": 12.5,
+          "chars": 44,
+          "max_node_chars": 44,
+          "sample": "Appendix A   Python generator (condensed"
+        }
+      ]
+    },
+    {
+      "index": 22,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 2,
+          "max_node_chars": 2,
+          "sample": "23"
+        },
+        {
+          "pt": 8.1,
+          "chars": 681,
+          "max_node_chars": 681,
+          "sample": "import math\n\ndef qkernel(f, g):\n    # th"
+        },
+        {
+          "pt": 12.5,
+          "chars": 34,
+          "max_node_chars": 34,
+          "sample": "Appendix A (continued)   Kernel in Pytho"
+        }
+      ]
+    },
+    {
+      "index": 23,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 2,
+          "max_node_chars": 2,
+          "sample": "24"
+        },
+        {
+          "pt": 8.1,
+          "chars": 914,
+          "max_node_chars": 914,
+          "sample": "// Quantum kernel - exact classical emul"
+        },
+        {
+          "pt": 12.5,
+          "chars": 57,
+          "max_node_chars": 57,
+          "sample": "Appendix B   JavaScript kernel and infla"
+        }
+      ]
+    },
+    {
+      "index": 24,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 2,
+          "max_node_chars": 2,
+          "sample": "25"
+        },
+        {
+          "pt": 8.1,
+          "chars": 1142,
+          "max_node_chars": 1142,
+          "sample": "import math\n\n# Finite element expansion "
+        },
+        {
+          "pt": 12.5,
+          "chars": 45,
+          "max_node_chars": 45,
+          "sample": "Appendix C   Finite element solver (Pyth"
+        }
+      ]
+    },
+    {
+      "index": 25,
+      "runs": [
+        {
+          "pt": 8,
+          "chars": 2,
+          "max_node_chars": 2,
+          "sample": "26"
+        },
+        {
+          "pt": 8.1,
+          "chars": 2065,
+          "max_node_chars": 2065,
+          "sample": "def solve(tan):\n        ke = [tan[e] * ("
+        },
+        {
+          "pt": 8.7,
+          "chars": 160,
+          "max_node_chars": 146,
+          "sample": "End of preprint."
+        },
+        {
+          "pt": 12.5,
+          "chars": 53,
+          "max_node_chars": 53,
+          "sample": "Appendix C (continued)   Expansion routi"
+        }
+      ]
+    }
+  ],
+  "image_resolution": [
+    {
+      "index": 0,
+      "images": []
+    },
+    {
+      "index": 1,
+      "images": []
+    },
+    {
+      "index": 2,
+      "images": []
+    },
+    {
+      "index": 3,
+      "images": []
+    },
+    {
+      "index": 4,
+      "images": []
+    },
+    {
+      "index": 5,
+      "images": []
+    },
+    {
+      "index": 6,
+      "images": [
+        {
+          "rendered_w": 664.5,
+          "natural_w": 2160,
+          "src_head": "data:image/png;base64,iVBORw0KGgoAAAANSU"
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "images": [
+        {
+          "rendered_w": 664.5,
+          "natural_w": 2160,
+          "src_head": "data:image/png;base64,iVBORw0KGgoAAAANSU"
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "images": []
+    },
+    {
+      "index": 9,
+      "images": []
+    },
+    {
+      "index": 10,
+      "images": []
+    },
+    {
+      "index": 11,
+      "images": [
+        {
+          "rendered_w": 664.5,
+          "natural_w": 2160,
+          "src_head": "data:image/png;base64,iVBORw0KGgoAAAANSU"
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "images": []
+    },
+    {
+      "index": 13,
+      "images": [
+        {
+          "rendered_w": 664.5,
+          "natural_w": 2160,
+          "src_head": "data:image/png;base64,iVBORw0KGgoAAAANSU"
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "images": []
+    },
+    {
+      "index": 15,
+      "images": []
+    },
+    {
+      "index": 16,
+      "images": [
+        {
+          "rendered_w": 664.5,
+          "natural_w": 2220,
+          "src_head": "data:image/png;base64,iVBORw0KGgoAAAANSU"
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "images": []
+    },
+    {
+      "index": 18,
+      "images": []
+    },
+    {
+      "index": 19,
+      "images": []
+    },
+    {
+      "index": 20,
+      "images": []
+    },
+    {
+      "index": 21,
+      "images": []
+    },
+    {
+      "index": 22,
+      "images": []
+    },
+    {
+      "index": 23,
+      "images": []
+    },
+    {
+      "index": 24,
+      "images": []
+    },
+    {
+      "index": 25,
+      "images": []
+    }
+  ],
+  "geometry": {
+    "failures": [],
+    "advisories": []
+  },
+  "gate_failures": [],
+  "advisories": [
+    "most text renders at 9.8pt, below the 10pt body target; acceptable only when the brief asks for a compact document"
+  ]
+}
