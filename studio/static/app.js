@@ -76,8 +76,8 @@ document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click
 function showTab(name) {
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   document.querySelectorAll('section.panel').forEach(s => s.classList.toggle('active', s.id === 'tab-' + name));
-  if (!tabLoaded[name]) { tabLoaded[name] = true; ({ gi: initGi, stent: initStent, elliptic: initElliptic, ehr: initEhr, econ: initEcon }[name] || (() => {}))(); }
-  else requestAnimationFrame(() => ({ gi: () => bemData && drawBem($('bemCanvas'), bemData, bemMode), stent: () => femData && drawFemStatic(), elliptic: () => ellData && drawElliptic(), ehr: () => ehrData && drawEhr(), econ: () => econData && drawEcon() }[name] || (() => {}))());
+  if (!tabLoaded[name]) { tabLoaded[name] = true; ({ gi: initGi, stent: initStent, elliptic: initElliptic, ehr: initEhr, qml: initQml, econ: initEcon }[name] || (() => {}))(); }
+  else requestAnimationFrame(() => ({ gi: () => bemData && drawBem($('bemCanvas'), bemData, bemMode), stent: () => femData && drawFemStatic(), elliptic: () => ellData && drawElliptic(), ehr: () => ehrData && drawEhr(), qml: () => qmlData && drawQml(), econ: () => econData && drawEcon() }[name] || (() => {}))());
 }
 
 /* ============================================================== BEM rendering */
@@ -407,32 +407,181 @@ function drawForest() {
   $('forestLegend').innerHTML = `<span>${f.legend}</span>`;
 }
 function renderEconTable() {
-  const regs = econData.contexts[ecCtx].members, R = econData.regions, V = econData.value_ratios;
-  $('ecTable').innerHTML = `<table><tr><th>Region</th><th>10-yr revenue</th><th>NPV</th><th>Enterprise value</th><th>Payback</th><th>MC NPV P5 / P95</th><th>P(NPV&gt;0)</th><th>Value ratio CV / GI</th></tr>${regs.map(k => { const x = R[k], mc = x.monte_carlo;
-    return `<tr><td><span style="color:${REG_COLORS[k]}">●</span> ${x.name}</td><td>${money(x.cumulative_revenue)}</td><td>${money(x.npv)}</td><td>${money(x.ev)}</td><td>${x.payback_year ? 'year ' + x.payback_year : 'none'}</td><td>${money(mc.npv.p5)} / ${money(mc.npv.p95)}</td><td>${pct(mc.npv.prob_positive, 0)}</td><td>${V[k].cv.value_ratio.toFixed(2)} / ${V[k].gi.value_ratio.toFixed(2)}</td></tr>`; }).join('')}</table>`;
+  const regs = econData.contexts[ecCtx].members, R = econData.regions, V = econData.value_ratios, CEA = econData.cea;
+  $('ecTable').innerHTML = `<table><tr><th>Region</th><th>10-yr revenue</th><th>EBITDA (10y)</th><th>NPV</th><th>EV</th><th>Payback</th><th>MC NPV P5/P95</th><th>QALYs (10y)</th><th>ICER</th><th>NMB (10y)</th><th>Payer ROI</th></tr>${regs.map(k => { const x = R[k], mc = x.monte_carlo, c = CEA[k];
+    return `<tr><td><span style="color:${REG_COLORS[k]}">●</span> ${x.name}</td><td>${money(x.cumulative_revenue)}</td><td>${money(x.ebitda_10y)}</td><td>${money(x.npv)}</td><td>${money(x.ev)}</td><td>${x.payback_year ? 'yr ' + x.payback_year : 'none'}</td><td>${money(mc.npv.p5)} / ${money(mc.npv.p95)}</td><td>${c.qalys_gained_10y.toFixed(0)}</td><td>${c.dominant ? '<span style="color:#34d399">Dominant</span>' : money(c.icer) + '/QALY'}</td><td>${money(c.nmb_10y)}</td><td>${c.payer_roi.toFixed(2)}×</td></tr>`; }).join('')}</table>`;
+}
+function drawLines() {
+  const c = econData.contexts[ecCtx], { ctx, W, H, r } = fit($('ecLines')); ctx.clearRect(0, 0, W, H);
+  const m = { l: 62 * r, r: 16 * r, t: 16 * r, b: 30 * r };
+  const lby = c.line_by_year, keys = ['cv', 'gi', 'ehr', 'qml'], cols = { cv: '#22d3ee', gi: '#34d399', ehr: '#a78bfa', qml: '#e879f9' };
+  const totals = Array.from({ length: 10 }, (_, i) => keys.reduce((s, k) => s + lby[k][i], 0));
+  const ymax = Math.max(...totals, ...c.ebitda) * 1.12 || 1;
+  const X = i => m.l + (i + 0.5) / 10 * (W - m.l - m.r), bw = (W - m.l - m.r) / 10 * 0.58;
+  const Y = v => H - m.b - Math.max(0, v) / ymax * (H - m.t - m.b);
+  axisBox(ctx, W, H, r, m); ctx.font = `${10 * r}px system-ui`; ctx.fillStyle = '#8fa0c8';
+  for (let k = 0; k <= 4; k++) { const v = ymax * k / 4; ctx.fillText(money(v), 4 * r, Y(v) + 4 * r); ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.moveTo(m.l, Y(v)); ctx.lineTo(W - m.r, Y(v)); ctx.stroke(); }
+  for (let i = 0; i < 10; i++) {
+    ctx.fillStyle = '#8fa0c8'; ctx.fillText(`Y${i + 1}`, X(i) - 7 * r, H - 8 * r);
+    let acc = 0;
+    for (const k of keys) {
+      const val = lby[k][i], y0 = Y(acc), y1 = Y(acc + val);
+      ctx.fillStyle = cols[k]; ctx.fillRect(X(i) - bw / 2, y1, bw, Math.max(1, y0 - y1));
+      acc += val;
+    }
+  }
+  ctx.save(); ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2.4 * r; ctx.shadowColor = '#fbbf24'; ctx.shadowBlur = 8 * r; ctx.beginPath();
+  c.ebitda.forEach((v, i) => i ? ctx.lineTo(X(i), Y(v)) : ctx.moveTo(X(i), Y(v))); ctx.stroke(); ctx.restore();
+  $('linesTitle').textContent = `Revenue by product line & EBITDA · ${ecCtx === 'us_canada' ? 'US & Canada' : 'Asia-Pacific'}`;
+  $('linesLegend').innerHTML = '<span><i style="background:#22d3ee"></i>CV Stent</span><span><i style="background:#34d399"></i>GI BEM</span><span><i style="background:#a78bfa"></i>EHR</span><span><i style="background:#e879f9"></i>QML Traj</span><span><i style="background:#fbbf24"></i>EBITDA</span>';
+}
+function drawCea() {
+  const regs = econData.contexts[ecCtx].members, CEA = econData.cea, { ctx, W, H, r } = fit($('ecCea')); ctx.clearRect(0, 0, W, H);
+  const m = { l: 92 * r, r: 24 * r, t: 18 * r, b: 30 * r };
+  const vals = regs.map(k => CEA[k].nmb_10y), vmax = Math.max(...vals, 1) * 1.1;
+  const X = v => m.l + Math.max(0, v) / vmax * (W - m.l - m.r), rh = (H - m.t - m.b) / regs.length;
+  axisBox(ctx, W, H, r, m); ctx.font = `${10.5 * r}px system-ui`;
+  for (let k = 0; k <= 4; k++) { const v = vmax * k / 4; ctx.fillStyle = '#8fa0c8'; ctx.fillText(money(v), X(v) - 16 * r, H - 10 * r); ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.moveTo(X(v), m.t); ctx.lineTo(X(v), H - m.b); ctx.stroke(); }
+  regs.forEach((k, i) => {
+    const c = CEA[k], y = m.t + rh * (i + 0.5), bh = Math.min(22 * r, rh * 0.55);
+    ctx.fillStyle = '#e8eeff'; ctx.fillText(econData.regions[k].name, 8 * r, y + 4 * r);
+    const gr = ctx.createLinearGradient(m.l, 0, X(c.nmb_10y), 0); gr.addColorStop(0, REG_COLORS[k] + '55'); gr.addColorStop(1, REG_COLORS[k]);
+    ctx.fillStyle = gr; ctx.beginPath(); ctx.roundRect(m.l, y - bh / 2, Math.max(4 * r, X(c.nmb_10y) - m.l), bh, 5 * r); ctx.fill();
+    ctx.fillStyle = '#e8eeff'; ctx.fillText(`${c.qalys_gained_10y.toFixed(0)} QALYs · ${c.payer_roi.toFixed(1)}× ROI`, Math.min(W - m.r - 135 * r, X(c.nmb_10y) + 6 * r), y + 4 * r);
+  });
+  $('ceaTitle').textContent = `10-year Net Monetary Benefit (NMB) & QALYs · ${ecCtx === 'us_canada' ? 'US & Canada' : 'Asia-Pacific'}`;
+  $('ceaLegend').innerHTML = '<span>Bar = NMB = WTP × ΔQALY − Net Payer Cost</span><span>Label = QALYs gained &amp; Payer ROI</span>';
 }
 function renderEcon() {
   const c = econData.contexts[ecCtx], name = ecCtx === 'us_canada' ? 'US & Canada' : 'Asia-Pacific';
   const t = (k, v, s, cl) => `<div class="tile ${cl}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
   $('ecTiles').innerHTML = t('10-YEAR REVENUE', money(c.cumulative_revenue), `Monte Carlo 5–95%: ${money(c.cumulative_quantiles.p5)} – ${money(c.cumulative_quantiles.p95)}`, 'cyan') +
-    t('NET PRESENT VALUE', money(c.npv), `MC median ${money(c.npv_quantiles.p50)}`, 'green') + t('ENTERPRISE VALUE', money(c.ev), `with terminal value · MC 5–95%: ${money(c.ev_quantiles.p5)} – ${money(c.ev_quantiles.p95)}`, 'violet') +
-    t('P(NPV > 0)', pct(c.npv_quantiles.prob_positive, 0), `${name} · ${econData.assumptions.mc_draws.toLocaleString()} draws`, 'amber');
-  renderEconTable(); drawFan(); drawForest();
+    t('NET PRESENT VALUE', money(c.npv), `MC median ${money(c.npv_quantiles.p50)} · EBITDA ${money(c.ebitda_10y)}`, 'green') +
+    t('ENTERPRISE VALUE', money(c.ev), `MC 5–95%: ${money(c.ev_quantiles.p5)} – ${money(c.ev_quantiles.p95)}`, 'violet') +
+    t('PAYER NMB & QALYs', money(c.nmb_10y), `${c.qalys_gained_10y.toFixed(0)} QALYs · ${money(c.total_payer_savings_10y)} savings`, 'amber');
+  renderEconTable(); drawFan(); drawForest(); drawLines(); drawCea();
 }
-function drawEcon() { if (econData) { drawFan(); drawForest(); } }
+function drawEcon() { if (econData) { drawFan(); drawForest(); drawLines(); drawCea(); } }
 async function initEcon() {
   $('ecTiles').innerHTML = '<div class="tile cyan"><div class="k">LOADING</div><div class="v"><span class="spin"></span></div></div>';
   try {
-    econData = await api('/api/economics'); const L = econData.physics_link, a = econData.assumptions;
-    $('ecLink').innerHTML = `Optimized designs lower a mechanical risk index J, which scales complication risk as p = p₀(1 + κJ).<table><tr><th>Line</th><th>J baseline → optimized</th><th>Risk</th><th>Relative reduction</th></tr>
-      <tr><td>Stent (FE)</td><td>${L.cv.J_baseline.toFixed(3)} → ${L.cv.J_optimized.toFixed(3)}</td><td>${pct(L.cv.baseline_risk, 1)} → ${pct(L.cv.optimized_risk, 1)}</td><td>${pct(L.cv.relative_risk_reduction, 1)}</td></tr>
-      <tr><td>GI (BEM)</td><td>${L.gi.J_baseline.toFixed(3)} → ${L.gi.J_optimized.toFixed(3)}</td><td>${pct(L.gi.baseline_risk, 1)} → ${pct(L.gi.optimized_risk, 1)}</td><td>${pct(L.gi.relative_risk_reduction, 1)}</td></tr></table>
-      <p class="note">p₀ (stent 8%, GI 6%), κ and complication costs are assumptions. A value ratio above 1 means the modelled complication savings exceed the planning fee.</p>`;
-    $('ecAssume').innerHTML = `<ul style="padding-left:18px;line-height:1.7"><li>Logistic adoption, steepness ${a.steepness}, midpoint ${a.midpoint} y after regulatory lead time.</li><li>Procedure growth ${pct(a.growth, 0)}/yr; COGS ${pct(a.cogs, 0)}; terminal growth ${pct(a.terminal_growth, 0)}.</li><li>Regional price index, volumes, sites, discount rates and lead times are illustrative archetypes.</li><li>Monte Carlo: Beta adoption ceilings, lognormal price (σ 0.15), uniform lead shift, normal growth, triangular discount rate.</li><li>Bootstrap and regression use a synthetic 36-month pilot history; the Bayesian prism uses a synthetic 24-site pilot.</li></ul>`;
+    econData = await api('/api/economics'); const L = econData.physics_link, Q = econData.qml_value, a = econData.assumptions;
+    $('ecLink').innerHTML = `Optimized physics (FEM/BEM) + QML trajectory stratification reduce complications and 30-day readmissions.<table><tr><th>Line</th><th>J base → opt</th><th>Complication Δ</th><th>30d Readmit Δ</th><th>QALY / case</th></tr>
+      <tr><td>Stent (FE+QML)</td><td>${L.cv.J_baseline.toFixed(3)} → ${L.cv.J_optimized.toFixed(3)}</td><td>−${pct(L.cv.relative_risk_reduction, 1)}</td><td>−${pct(Q.cv.readmission_reduction, 1)}</td><td>+${Q.cv.qaly_per_case.toFixed(3)}</td></tr>
+      <tr><td>GI (BEM+QML)</td><td>${L.gi.J_baseline.toFixed(3)} → ${L.gi.J_optimized.toFixed(3)}</td><td>−${pct(L.gi.relative_risk_reduction, 1)}</td><td>−${pct(Q.gi.readmission_reduction, 1)}</td><td>+${Q.gi.qaly_per_case.toFixed(3)}</td></tr></table>
+      <p class="note">Net Monetary Benefit NMB = WTP × ΔQALY − (Software Fees − Complication &amp; Readmission Savings). Dominant indicates net cost savings for payers.</p>`;
+    $('ecAssume').innerHTML = `<ul style="padding-left:18px;line-height:1.7"><li>4 revenue lines: CV Stent FE, GI BEM, EHR Platform, and QML Post-Op Trajectory Suite.</li><li>Logistic adoption, steepness ${a.steepness}, midpoint ${a.midpoint} y after regulatory lead time; COGS ${pct(a.cogs, 0)}.</li><li>Regional WTP thresholds ($8k–$100k/QALY), volumes, discount rates and lead times are illustrative archetypes.</li><li>Monte Carlo: Beta adoption ceilings, lognormal price (σ 0.15), uniform lead shift, normal growth, triangular discount rate.</li><li>Bootstrap and regression use a synthetic 36-month pilot history; the Bayesian prism uses a synthetic 24-site pilot.</li></ul>`;
     document.querySelectorAll('#ecCtx button').forEach(b => b.addEventListener('click', () => { ecCtx = b.dataset.c; document.querySelectorAll('#ecCtx button').forEach(x => x.classList.toggle('on', x === b)); renderEcon(); }));
     document.querySelectorAll('#ecPrism button').forEach(b => b.addEventListener('click', () => { ecPrism = b.dataset.p; document.querySelectorAll('#ecPrism button').forEach(x => x.classList.toggle('on', x === b)); drawForest(); }));
     renderEcon();
   } catch (err) { $('ecTiles').innerHTML = `<div class="err">${err.message}</div>`; }
+}
+
+/* ======================================================== QML trajectories */
+let qmlData = null, qmlProc = 'stent', qmlOpt = true, qmlSeq = 0;
+function drawQml() {
+  const d = qmlData; if (!d) return;
+  const days = d.days;
+  // 1. Recovery Probability Trajectory
+  let { ctx, W, H, r } = fit($('qmlTrajCanvas')); ctx.clearRect(0, 0, W, H);
+  let m = { l: 54 * r, r: 20 * r, t: 18 * r, b: 32 * r };
+  let X = t => m.l + t / 90 * (W - m.l - m.r), Y = v => H - m.b - v * (H - m.t - m.b);
+  axisBox(ctx, W, H, r, m); ctx.font = `${10.5 * r}px system-ui`; ctx.fillStyle = '#8fa0c8';
+  for (let k = 0; k <= 5; k++) { const v = k * 0.2; ctx.fillText(pct(v, 0), 8 * r, Y(v) + 4 * r); ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.moveTo(m.l, Y(v)); ctx.lineTo(W - m.r, Y(v)); ctx.stroke(); }
+  [0, 14, 30, 60, 90].forEach(day => { ctx.fillText(`D${day}`, X(day) - 10 * r, H - 10 * r); ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.moveTo(X(day), m.t); ctx.lineTo(X(day), H - m.b); ctx.stroke(); });
+  // Band p5 - p95
+  const grad = ctx.createLinearGradient(0, m.t, 0, H - m.b); grad.addColorStop(0, 'rgba(34,211,238,0.35)'); grad.addColorStop(1, 'rgba(34,211,238,0.06)');
+  ctx.fillStyle = grad; ctx.beginPath();
+  days.forEach((day, i) => i ? ctx.lineTo(X(day), Y(d.p95[i])) : ctx.moveTo(X(day), Y(d.p95[i])));
+  for (let i = days.length - 1; i >= 0; i--) ctx.lineTo(X(days[i]), Y(d.p5[i]));
+  ctx.closePath(); ctx.fill();
+  const plotCurve = (arr, col, dash) => {
+    ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = 2.4 * r; ctx.shadowColor = col; ctx.shadowBlur = 7 * r;
+    if (dash) ctx.setLineDash(dash.map(x => x * r));
+    ctx.beginPath(); days.forEach((day, i) => i ? ctx.lineTo(X(day), Y(arr[i])) : ctx.moveTo(X(day), Y(arr[i]))); ctx.stroke(); ctx.restore();
+  };
+  plotCurve(d.p_baseline_physics, '#fb7185', [3, 4]);
+  plotCurve(d.p_classical, '#fbbf24', [6, 4]);
+  plotCurve(d.p_recovery, '#22d3ee', null);
+  days.forEach((day, i) => { ctx.fillStyle = '#22d3ee'; ctx.beginPath(); ctx.arc(X(day), Y(d.p_recovery[i]), 3.5 * r, 0, 7); ctx.fill(); });
+
+  // 2. Hazard & Functional Score
+  ({ ctx, W, H, r } = fit($('qmlHazardCanvas'))); ctx.clearRect(0, 0, W, H);
+  m = { l: 50 * r, r: 46 * r, t: 18 * r, b: 30 * r };
+  X = t => m.l + t / 90 * (W - m.l - m.r);
+  const hMax = Math.max(...d.hazard, 2.0) * 1.15;
+  const Yh = v => H - m.b - v / hMax * (H - m.t - m.b), Yf = v => H - m.b - v / 100 * (H - m.t - m.b);
+  axisBox(ctx, W, H, r, m); ctx.font = `${10 * r}px system-ui`;
+  for (let k = 0; k <= 4; k++) {
+    ctx.fillStyle = '#fb7185'; ctx.fillText((hMax * k / 4).toFixed(1), 8 * r, Yh(hMax * k / 4) + 4 * r);
+    ctx.fillStyle = '#34d399'; ctx.fillText(`${k * 25}`, W - m.r + 8 * r, Yf(k * 25) + 4 * r);
+  }
+  [0, 14, 30, 60, 90].forEach(day => { ctx.fillStyle = '#8fa0c8'; ctx.fillText(`D${day}`, X(day) - 10 * r, H - 8 * r); });
+  ctx.save(); ctx.strokeStyle = '#fb7185'; ctx.lineWidth = 2.2 * r; ctx.beginPath(); days.forEach((day, i) => i ? ctx.lineTo(X(day), Yh(d.hazard[i])) : ctx.moveTo(X(day), Yh(d.hazard[i]))); ctx.stroke(); ctx.restore();
+  ctx.save(); ctx.strokeStyle = '#34d399'; ctx.lineWidth = 2.4 * r; ctx.beginPath(); days.forEach((day, i) => i ? ctx.lineTo(X(day), Yf(d.functional_score[i])) : ctx.moveTo(X(day), Yf(d.functional_score[i]))); ctx.stroke(); ctx.restore();
+
+  // 3. Feature Attribution
+  ({ ctx, W, H, r } = fit($('qmlAttrCanvas'))); ctx.clearRect(0, 0, W, H);
+  m = { l: 150 * r, r: 24 * r, t: 18 * r, b: 28 * r };
+  const attrs = d.attributions, maxAbs = Math.max(...attrs.map(a => Math.abs(a.delta_30d)), 0.02) * 1.15;
+  const Xa = v => m.l + (v + maxAbs) / (2 * maxAbs) * (W - m.l - m.r), rh = (H - m.t - m.b) / attrs.length;
+  axisBox(ctx, W, H, r, m); ctx.font = `${10 * r}px system-ui`;
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.beginPath(); ctx.moveTo(Xa(0), m.t); ctx.lineTo(Xa(0), H - m.b); ctx.stroke();
+  attrs.forEach((a, i) => {
+    const y = m.t + rh * (i + 0.5), bh = Math.min(18 * r, rh * 0.58), x0 = Xa(0), x1 = Xa(a.delta_30d);
+    ctx.fillStyle = '#e8eeff'; ctx.fillText(a.label, 8 * r, y + 4 * r);
+    ctx.fillStyle = a.delta_30d >= 0 ? '#34d399' : '#a78bfa';
+    ctx.beginPath(); ctx.roundRect(Math.min(x0, x1), y - bh / 2, Math.max(3 * r, Math.abs(x1 - x0)), bh, 4 * r); ctx.fill();
+    ctx.fillStyle = '#8fa0c8'; ctx.fillText(`${a.delta_30d >= 0 ? '+' : ''}${(a.delta_30d * 100).toFixed(1)}%`, x1 + (a.delta_30d >= 0 ? 5 * r : -38 * r), y + 4 * r);
+  });
+}
+
+async function loadQml() {
+  const seq = ++qmlSeq;
+  const body = {
+    procedure: qmlProc,
+    age: +$('qAge').value,
+    comorbidity: +$('qCom').value,
+    burden: +$('qBur').value,
+    ehr_delay: +$('qDel').value,
+    gamma: +$('qGam').value,
+    use_optimized: qmlOpt,
+  };
+  $('qAgeV').textContent = `${body.age} y`; $('qComV').textContent = body.comorbidity.toFixed(2);
+  $('qBurV').textContent = body.burden.toFixed(2); $('qDelV').textContent = body.ehr_delay.toFixed(2);
+  $('qGamV').textContent = body.gamma.toFixed(2);
+  try {
+    const d = await api('/api/qml', body); if (seq !== qmlSeq) return;
+    qmlData = d; $('qmlErr').textContent = '';
+    const s = d.summary, dg = d.diagnostics;
+    $('qRec30').textContent = pct(s.recovery_30d, 1);
+    $('qRec30S').textContent = `gain vs unoptimized: ${s.recovery_gain_vs_baseline >= 0 ? '+' : ''}${pct(s.recovery_gain_vs_baseline, 1)}`;
+    $('qRec90').textContent = pct(s.recovery_90d, 1);
+    $('qRec90S').textContent = `functional score ${s.functional_90d.toFixed(1)} / 100`;
+    $('qRead').textContent = pct(s.readmission_30d, 1);
+    $('qReadS').textContent = `expected LOS ${s.expected_los_days.toFixed(1)} days · −${pct(s.readmission_reduction, 1)} vs base`;
+    $('qAuc').textContent = `${dg.auroc_30d.toFixed(3)} · ${dg.gram_eig_min.toExponential(1)}`;
+    $('qAucS').textContent = `RBF AUROC ${dg.auroc_classical_30d.toFixed(3)} · Brier ${dg.brier_30d.toFixed(3)}`;
+    $('qmlChars').innerHTML = `<table><tr><th>Archetype</th><th>Quantum Kernel K<sub>Q</sub></th><th>Expected 90d</th></tr>${d.archetypes.map(a =>
+      `<tr><td>${a.label}</td><td>${a.similarity.toFixed(4)}</td><td>${pct(a.expected_90d, 0)}</td></tr>`).join('')}</table>
+      <p class="note">Procedure: <b>${d.procedure}</b> (${d.use_optimized ? 'physics-optimized' : 'baseline'}). Gram trace = ${dg.gram_trace.toFixed(1)}, effective rank = ${dg.effective_rank.toFixed(2)}, 90d MAE = ${dg.mae_90d.toFixed(3)}.</p>`;
+    drawQml();
+  } catch (err) { if (seq === qmlSeq) $('qmlErr').textContent = err.message; }
+}
+
+function initQml() {
+  ['qAge', 'qCom', 'qBur', 'qDel', 'qGam'].forEach(id => $(id).addEventListener('input', debounce(loadQml, 140)));
+  document.querySelectorAll('#qmlProc button').forEach(b => b.addEventListener('click', () => {
+    qmlProc = b.dataset.p;
+    document.querySelectorAll('#qmlProc button').forEach(x => x.classList.toggle('on', x === b));
+    loadQml();
+  }));
+  $('qmlOptBtn').addEventListener('click', () => {
+    qmlOpt = !qmlOpt;
+    $('qmlOptBtn').textContent = `⚡ Physics-optimized: ${qmlOpt ? 'ON' : 'OFF'}`;
+    loadQml();
+  });
+  loadQml();
 }
 
 /* ================================================================== overview */
@@ -443,8 +592,8 @@ async function initOverview() {
     $('heroTiles').innerHTML =
       t('BEM · VERIFIED', `order ${s.bem.order.toFixed(2)}`, `current error ${(s.bem.final_error * 100).toFixed(3)}% vs exact ring modulus`, 'cyan') +
       t('FEM · VERIFIED', `${(s.fem.final_error * 100).toFixed(2)}%`, `Lamé error; conformal grid ${s.fem.graded_vs_uniform.toFixed(2)}× better`, 'green') +
-      t('HEURISTICS', `F1 ${s.ehr.f1.toFixed(2)}`, `${(s.ehr.reduction * 100).toFixed(2)}% fewer comparisons · scheduling −${(s.ehr.schedule_gain * 100).toFixed(0)}% tardiness`, 'violet') +
-      t('10-YR REVENUE (ILLUSTRATIVE)', `${money(s.contexts.us_canada.cumulative)} · ${money(s.contexts.asia_pacific.cumulative)}`, 'US & Canada · Asia-Pacific scenario totals', 'amber');
+      t('QML · TRAJECTORIES', `${(s.qml.recovery_90d * 100).toFixed(1)}% 90d`, `AUROC ${s.qml.auroc_30d.toFixed(3)} · 30d readmit ${(s.qml.readmission_30d * 100).toFixed(1)}%`, 'violet') +
+      t('10-YR REVENUE (ILLUSTRATIVE)', `${money(s.contexts.us_canada.cumulative)} · ${money(s.contexts.asia_pacific.cumulative)}`, `US/CA & APAC · NMB ${money(s.contexts.us_canada.nmb + s.contexts.asia_pacific.nmb)}`, 'amber');
   } catch (e) { $('heroTiles').innerHTML = `<div class="err">${e.message}</div>`; }
   try {
     const d = await api('/api/bem', { R: 4.0, a: 1.0, e: 1.4, heat_fraction: 0.2 }); drawBem($('ovBem'), d, 'heat');

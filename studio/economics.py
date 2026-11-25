@@ -22,27 +22,30 @@ from typing import Dict, List
 import numpy as np
 from scipy import stats
 
+import qml_trajectories
+
 YEARS = 10
 
 REGIONS: Dict[str, Dict[str, object]] = {
     "us": {"cost_index": 1.0, "name": "United States", "context": "us_canada", "price_index": 1.00, "cv_k": 700, "gi_k": 450, "sites": 900,
-           "discount": 0.08, "lead": 1.0, "fixed_M": 1.4, "launch_M": 6.0},
+           "discount": 0.08, "lead": 1.0, "fixed_M": 1.4, "launch_M": 6.0, "wtp_qaly": 100000.0, "readmit_cost": 18500.0},
     "canada": {"cost_index": 0.8, "name": "Canada", "context": "us_canada", "price_index": 0.78, "cv_k": 80, "gi_k": 55, "sites": 120,
-               "discount": 0.08, "lead": 1.5, "fixed_M": 0.7, "launch_M": 3.0},
+               "discount": 0.08, "lead": 1.5, "fixed_M": 0.7, "launch_M": 3.0, "wtp_qaly": 50000.0, "readmit_cost": 14500.0},
     "japan": {"cost_index": 0.65, "name": "Japan", "context": "asia_pacific", "price_index": 0.70, "cv_k": 220, "gi_k": 160, "sites": 400,
-              "discount": 0.05, "lead": 2.0, "fixed_M": 1.0, "launch_M": 4.5},
+              "discount": 0.05, "lead": 2.0, "fixed_M": 1.0, "launch_M": 4.5, "wtp_qaly": 45000.0, "readmit_cost": 12000.0},
     "china": {"cost_index": 0.3, "name": "China", "context": "asia_pacific", "price_index": 0.45, "cv_k": 900, "gi_k": 600, "sites": 1200,
-              "discount": 0.10, "lead": 3.0, "fixed_M": 1.1, "launch_M": 4.5},
+              "discount": 0.10, "lead": 3.0, "fixed_M": 1.1, "launch_M": 4.5, "wtp_qaly": 15000.0, "readmit_cost": 5500.0},
     "india": {"cost_index": 0.15, "name": "India", "context": "asia_pacific", "price_index": 0.25, "cv_k": 500, "gi_k": 300, "sites": 800,
-              "discount": 0.12, "lead": 3.0, "fixed_M": 0.6, "launch_M": 2.5},
+              "discount": 0.12, "lead": 3.0, "fixed_M": 0.6, "launch_M": 2.5, "wtp_qaly": 8000.0, "readmit_cost": 2800.0},
     "australia": {"cost_index": 0.85, "name": "Australia", "context": "asia_pacific", "price_index": 0.82, "cv_k": 70, "gi_k": 45, "sites": 150,
-                  "discount": 0.08, "lead": 1.5, "fixed_M": 0.6, "launch_M": 2.8},
+                  "discount": 0.08, "lead": 1.5, "fixed_M": 0.6, "launch_M": 2.8, "wtp_qaly": 35000.0, "readmit_cost": 15000.0},
 }
 CONTEXTS = {"us_canada": ["us", "canada"], "asia_pacific": ["japan", "china", "india", "australia"]}
 
 LINES = {"cv": {"fee": 220.0, "smax": 0.18, "label": "Cardiovascular stent FE planning"},
          "gi": {"fee": 180.0, "smax": 0.15, "label": "GI surgery BEM planning"},
-         "ehr": {"fee": 45000.0, "smax": 0.35, "label": "EHR heuristic platform"}}
+         "ehr": {"fee": 45000.0, "smax": 0.35, "label": "EHR heuristic platform"},
+         "qml": {"fee": 140.0, "smax": 0.22, "label": "QML post-op trajectory suite"}}
 GROWTH, STEEPNESS, MIDPOINT, COGS, TERMINAL_G = 0.03, 0.9, 3.0, 0.25, 0.02
 
 # complication model: p = p0 (1 + kappa J); cost per complication in USD (index-scaled)
@@ -65,6 +68,8 @@ def revenue_lines(p: Dict[str, object], t: np.ndarray, smax_mult=1.0, price_mult
         vol = base * (1.0 + growth) ** (t - 1)
         out[line] = vol * adoption(t, LINES[line]["smax"] * smax_mult, lead, steep) * LINES[line]["fee"] * pi
     out["ehr"] = p["sites"] * adoption(t, LINES["ehr"]["smax"] * smax_mult, lead, steep) * LINES["ehr"]["fee"] * pi
+    total_proc = (p["cv_k"] + p["gi_k"]) * 1000.0 * (1.0 + growth) ** (t - 1)
+    out["qml"] = total_proc * adoption(t, LINES["qml"]["smax"] * smax_mult, lead, steep) * LINES["qml"]["fee"] * pi
     return out
 
 
@@ -121,7 +126,7 @@ def monte_carlo(p: Dict[str, object], n: int, rng: np.random.Generator) -> Dict[
     lead = rng.uniform(-0.5, 1.0, n)[:, None]
     growth = rng.normal(GROWTH, 0.01, n)[:, None]
     disc = rng.triangular(p["discount"] - 0.01, p["discount"], p["discount"] + 0.02, n)
-    for line, base in (("cv", p["cv_k"] * 1000.0), ("gi", p["gi_k"] * 1000.0), ("ehr", p["sites"])):
+    for line, base in (("cv", p["cv_k"] * 1000.0), ("gi", p["gi_k"] * 1000.0), ("ehr", p["sites"]), ("qml", (p["cv_k"] + p["gi_k"]) * 1000.0)):
         smax_base = LINES[line]["smax"]
         a, b = smax_base * k_conc, (1 - smax_base) * k_conc
         smax = rng.beta(a, b, n)[:, None]
@@ -192,28 +197,105 @@ def q(a: np.ndarray, lo=5, hi=95, axis=0):
             "p95": np.percentile(a, hi, axis=axis).tolist()}
 
 
+def qml_clinical_value() -> Dict[str, Dict[str, float]]:
+    """Quantify 30-day readmission reduction and QALY gain from QML-guided postoperative stratification."""
+    out: Dict[str, Dict[str, float]] = {}
+    for line, proc in (("cv", "stent"), ("gi", "gi")):
+        t_opt = qml_trajectories.predict_trajectory(procedure=proc, use_optimized=True)
+        t_base = qml_trajectories.predict_trajectory(procedure=proc, use_optimized=False)
+        red_readmit = max(0.0, t_base["summary"]["readmission_30d"] - t_opt["summary"]["readmission_30d"])
+        # 5-year discounted QALY increment from improved 90-day recovery & functional status
+        delta_rec90 = max(0.0, t_opt["summary"]["recovery_90d"] - t_base["summary"]["recovery_90d"])
+        delta_func = max(0.0, t_opt["summary"]["functional_90d"] - t_base["summary"]["functional_90d"]) / 100.0
+        qaly_per_case = 0.045 * delta_rec90 + 0.035 * delta_func + 0.020 * red_readmit * 10.0
+        out[line] = {
+            "readmission_30d_baseline": t_base["summary"]["readmission_30d"],
+            "readmission_30d_optimized": t_opt["summary"]["readmission_30d"],
+            "readmission_reduction": red_readmit,
+            "recovery_90d_gain": delta_rec90,
+            "qaly_per_case": float(max(0.008, qaly_per_case)),
+            "auroc_30d": t_opt["diagnostics"]["auroc_30d"],
+        }
+    return out
+
+
+def cost_effectiveness(link: Dict[str, Dict[str, float]], qml_val: Dict[str, Dict[str, float]],
+                       region_lines: Dict[str, Dict[str, np.ndarray]]) -> Dict[str, Dict[str, float]]:
+    """Compute 10-year payer savings (complication + readmission), QALYs, ICER, NMB, and payer ROI per region."""
+    t = np.arange(1, YEARS + 1)
+    out: Dict[str, Dict[str, float]] = {}
+    for key, p in REGIONS.items():
+        pi = p["price_index"]
+        ci = p["cost_index"]
+        comp_sav_10y = 0.0
+        readmit_sav_10y = 0.0
+        qalys_10y = 0.0
+        for line, base_k in (("cv", p["cv_k"]), ("gi", p["gi_k"])):
+            vol = base_k * 1000.0 * (1.0 + GROWTH) ** (t - 1)
+            adopted = vol * adoption(t, LINES[line]["smax"], p["lead"])
+            total_cases = float(adopted.sum())
+            comp_sav_per = (link[line]["baseline_risk"] - link[line]["optimized_risk"]) * CLINICAL[line]["cost"] * ci
+            readmit_sav_per = qml_val[line]["readmission_reduction"] * p["readmit_cost"]
+            comp_sav_10y += total_cases * comp_sav_per
+            readmit_sav_10y += total_cases * readmit_sav_per
+            qalys_10y += total_cases * qml_val[line]["qaly_per_case"]
+        total_fees_10y = float(
+            region_lines[key]["cv"].sum()
+            + region_lines[key]["gi"].sum()
+            + region_lines[key]["qml"].sum()
+        )
+        total_payer_savings = comp_sav_10y + readmit_sav_10y
+        net_cost = total_fees_10y - total_payer_savings
+        icer = net_cost / max(qalys_10y, 1e-6)
+        nmb = p["wtp_qaly"] * qalys_10y - net_cost
+        out[key] = {
+            "complication_savings_10y": float(comp_sav_10y),
+            "readmission_savings_10y": float(readmit_sav_10y),
+            "total_payer_savings_10y": float(total_payer_savings),
+            "total_software_fees_10y": float(total_fees_10y),
+            "net_payer_cost_10y": float(net_cost),
+            "qalys_gained_10y": float(qalys_10y),
+            "icer": float(icer),
+            "dominant": bool(net_cost < 0.0),
+            "wtp_qaly": float(p["wtp_qaly"]),
+            "nmb_10y": float(nmb),
+            "payer_roi": float(total_payer_savings / max(total_fees_10y, 1.0)),
+        }
+    return out
+
+
 def run_all(link: Dict[str, Dict[str, float]], n_mc: int = 3000, seed: int = 2026) -> Dict[str, object]:
     t = np.arange(1, YEARS + 1)
     regions: Dict[str, object] = {}
     mc_by_region: Dict[str, Dict[str, np.ndarray]] = {}
     base_total: Dict[str, np.ndarray] = {}
+    region_lines_map: Dict[str, Dict[str, np.ndarray]] = {}
     for idx, (key, p) in enumerate(REGIONS.items()):
         lines = revenue_lines(p, t)
-        total = lines["cv"] + lines["gi"] + lines["ehr"]
+        region_lines_map[key] = lines
+        total = lines["cv"] + lines["gi"] + lines["ehr"] + lines["qml"]
         base_total[key] = total
         cv = cash_and_value(p, total)
         scen = {}
         for name, (sm, pm, ls) in {"low": (0.6, 0.85, 1.0), "base": (1.0, 1.0, 0.0), "high": (1.4, 1.1, -0.5)}.items():
             tl = revenue_lines(p, t, sm, pm, ls)
-            tt = tl["cv"] + tl["gi"] + tl["ehr"]
+            tt = tl["cv"] + tl["gi"] + tl["ehr"] + tl["qml"]
             c2 = cash_and_value(p, tt)
             scen[name] = {"revenue_10y": float(tt.sum()), "npv": float(c2["npv"]), "year10_revenue": float(tt[-1])}
         mc = monte_carlo(p, n_mc, np.random.default_rng(seed + idx))
         mc_by_region[key] = mc
+        cum_rev = float(total.sum())
+        ebitda_sum = float(cv["cf"].sum())
         regions[key] = {
             "name": p["name"], "context": p["context"], "discount": p["discount"], "lead": p["lead"],
-            "revenue_by_line": {k: v.tolist() for k, v in lines.items()}, "revenue": total.tolist(),
-            "ebitda": cv["cf"].tolist(), "cumulative_revenue": float(total.sum()), "npv": float(cv["npv"]), "ev": float(cv["ev"]),
+            "revenue_by_line": {k: v.tolist() for k, v in lines.items()},
+            "line_totals": {k: float(v.sum()) for k, v in lines.items()},
+            "revenue": total.tolist(),
+            "ebitda": cv["cf"].tolist(),
+            "ebitda_10y": ebitda_sum,
+            "ebitda_margin": float(ebitda_sum / max(cum_rev, 1.0)),
+            "cumulative_cf": (-p["launch_M"] * 1e6 + np.cumsum(cv["cf"])).tolist(),
+            "cumulative_revenue": cum_rev, "npv": float(cv["npv"]), "ev": float(cv["ev"]),
             "payback_year": payback_year(cv["cf"], p["launch_M"] * 1e6),
             "scenarios": scen,
             "monte_carlo": {"revenue_fan": q(mc["total"]), "npv": {"p5": float(np.percentile(mc["npv"], 5)), "p50": float(np.percentile(mc["npv"], 50)),
@@ -224,14 +306,26 @@ def run_all(link: Dict[str, Dict[str, float]], n_mc: int = 3000, seed: int = 202
             "bootstrap": bootstrap_prism(p, seed + 100 + idx), "regression": regression_prism(p, seed + 100 + idx),
             "bayes": bayes_prism(p, seed + 200 + idx),
         }
+    qml_val = qml_clinical_value()
+    cea = cost_effectiveness(link, qml_val, region_lines_map)
     contexts: Dict[str, object] = {}
     for cname, members in CONTEXTS.items():
         tot = np.sum([base_total[k] for k in members], axis=0)
+        ebitda_ctx = np.sum([np.array(regions[k]["ebitda"]) for k in members], axis=0)
+        line_by_year = {ln: np.sum([np.array(regions[k]["revenue_by_line"][ln]) for k in members], axis=0).tolist()
+                        for ln in LINES}
         mc_tot = np.sum([mc_by_region[k]["total"] for k in members], axis=0)
         mc_npv = np.sum([mc_by_region[k]["npv"] for k in members], axis=0)
         mc_ev = np.sum([mc_by_region[k]["ev"] for k in members], axis=0)
         contexts[cname] = {
             "members": members, "revenue": tot.tolist(), "cumulative_revenue": float(tot.sum()),
+            "ebitda": ebitda_ctx.tolist(),
+            "ebitda_10y": float(ebitda_ctx.sum()),
+            "line_by_year": line_by_year,
+            "line_totals": {ln: float(sum(line_by_year[ln])) for ln in LINES},
+            "qalys_gained_10y": float(sum(cea[k]["qalys_gained_10y"] for k in members)),
+            "total_payer_savings_10y": float(sum(cea[k]["total_payer_savings_10y"] for k in members)),
+            "nmb_10y": float(sum(cea[k]["nmb_10y"] for k in members)),
             "npv": float(sum(regions[k]["npv"] for k in members)), "ev": float(sum(regions[k]["ev"] for k in members)),
             "revenue_fan": q(mc_tot), "npv_quantiles": {"p5": float(np.percentile(mc_npv, 5)), "p50": float(np.percentile(mc_npv, 50)), "p95": float(np.percentile(mc_npv, 95)),
                                                          "prob_positive": float(np.mean(mc_npv > 0))},
@@ -240,4 +334,5 @@ def run_all(link: Dict[str, Dict[str, float]], n_mc: int = 3000, seed: int = 202
         }
     return {"regions": regions, "contexts": contexts, "lines": LINES, "assumptions": {
         "growth": GROWTH, "steepness": STEEPNESS, "midpoint": MIDPOINT, "cogs": COGS, "terminal_growth": TERMINAL_G, "years": YEARS,
-        "mc_draws": n_mc}, "physics_link": link, "value_ratios": value_ratios(link), "clinical": CLINICAL}
+        "mc_draws": n_mc}, "physics_link": link, "value_ratios": value_ratios(link), "clinical": CLINICAL,
+        "qml_value": qml_val, "cea": cea}

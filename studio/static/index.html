@@ -12,13 +12,14 @@
   <canvas id="bgfx" aria-hidden="true"></canvas>
   <header class="top">
     <div class="top-inner">
-      <div class="brand"><div class="logo">∂Ω</div><div>SURGICAL SIMULATION STUDIO<small>BEM · FEM · ELLIPTIC MODULI · EHR · ECONOMICS</small></div></div>
+      <div class="brand"><div class="logo">∂Ω</div><div>SURGICAL SIMULATION STUDIO<small>BEM · FEM · ELLIPTIC MODULI · EHR · QML · ECONOMICS</small></div></div>
       <nav class="tabs" id="tabs">
         <button data-tab="overview" class="active">Overview</button>
         <button data-tab="gi">GI Surgery · BEM</button>
         <button data-tab="stent">Stent Repair · FEM</button>
         <button data-tab="elliptic">Elliptic Moduli</button>
         <button data-tab="ehr">EHR Heuristics</button>
+        <button data-tab="qml">Clinical Trajectories · QML</button>
         <button data-tab="econ">Health Economics</button>
         <button data-tab="paper">Preprint</button>
       </nav>
@@ -170,6 +171,63 @@
         <div id="ehrRules" class="note"></div></div>
     </section>
 
+    <!-- QML CLINICAL TRAJECTORIES -->
+    <section class="panel" id="tab-qml">
+      <h2>Postoperative clinical trajectories · quantum machine learning</h2>
+      <p class="lede">6-qubit angle-encoded fidelity kernel with ZZ entangling phase modulation predicting 0–90 day postoperative recovery probabilities, complication hazard, functional recovery score, and 30-day readmission risk.</p>
+      <div class="notice">Synthetic postoperative cohort (N = 160) for educational finite-mathematics demonstration. Not a clinical decision tool.</div>
+      <div class="grid g-main" style="margin-top:16px">
+        <div class="card">
+          <h3>90-day postoperative recovery probability trajectory</h3>
+          <canvas id="qmlTrajCanvas" width="900" height="420" style="height:360px"></canvas>
+          <div class="legend"><span><i style="background:#22d3ee"></i>QML p50 (with 5–95% band)</span><span><i style="background:#fbbf24"></i>Classical RBF</span><span><i style="background:#fb7185"></i>Baseline unoptimized physics</span></div>
+        </div>
+        <div class="grid" style="align-content:start">
+          <div class="card">
+            <h3>Patient &amp; surgical parameters</h3>
+            <div class="row" style="margin-bottom:10px">
+              <div class="seg" id="qmlProc">
+                <button data-p="stent" class="on">Stent (FEM)</button>
+                <button data-p="gi">GI (BEM)</button>
+                <button data-p="vascular_open">Complex Vascular</button>
+              </div>
+              <button class="btn" id="qmlOptBtn">⚡ Physics-optimized: ON</button>
+            </div>
+            <div class="controls">
+              <div class="ctl"><label>Patient age (years) <b id="qAgeV"></b></label><input type="range" id="qAge" min="35" max="90" step="1" value="64"></div>
+              <div class="ctl"><label>Comorbidity index <b id="qComV"></b></label><input type="range" id="qCom" min="0" max="1" step="0.05" value="0.35"></div>
+              <div class="ctl"><label>Lesion / plaque burden <b id="qBurV"></b></label><input type="range" id="qBur" min="0" max="1" step="0.05" value="0.50"></div>
+              <div class="ctl"><label>EHR scheduling delay <b id="qDelV"></b></label><input type="range" id="qDel" min="0" max="1" step="0.05" value="0.25"></div>
+              <div class="ctl"><label>ZZ entanglement γ <b id="qGamV"></b></label><input type="range" id="qGam" min="0" max="1.2" step="0.05" value="0.25"></div>
+            </div>
+            <div class="err" id="qmlErr"></div>
+          </div>
+          <div class="grid g2">
+            <div class="tile cyan"><div class="k">30-DAY RECOVERY</div><div class="v" id="qRec30">—</div><div class="s" id="qRec30S">—</div></div>
+            <div class="tile green"><div class="k">90-DAY RECOVERY</div><div class="v" id="qRec90">—</div><div class="s" id="qRec90S">—</div></div>
+            <div class="tile rose"><div class="k">30-DAY READMISSION</div><div class="v" id="qRead">—</div><div class="s" id="qReadS">—</div></div>
+            <div class="tile violet"><div class="k">QML AUROC / λ<sub>min</sub></div><div class="v" id="qAuc">—</div><div class="s" id="qAucS">—</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="grid g2" style="margin-top:18px">
+        <div class="card">
+          <h3>Complication hazard &amp; functional recovery score (0–90d)</h3>
+          <canvas id="qmlHazardCanvas" width="900" height="360" style="height:310px"></canvas>
+          <div class="legend"><span><i style="background:#fb7185"></i>Daily hazard h(t) (per 100 pt-days)</span><span><i style="background:#34d399"></i>Functional score (0–100)</span></div>
+        </div>
+        <div class="card">
+          <h3>Quantum kernel feature attribution &amp; archetype similarity</h3>
+          <canvas id="qmlAttrCanvas" width="900" height="360" style="height:310px"></canvas>
+          <div class="legend"><span><i style="background:#a78bfa"></i>ΔP<sub>30d</sub> per +0.10 feature shift</span><span><i style="background:#22d3ee"></i>Archetype similarity K<sub>Q</sub></span></div>
+        </div>
+      </div>
+      <div class="grid g2" style="margin-top:18px">
+        <div class="card"><h3>Patient characteristics &amp; archetype match</h3><div id="qmlChars" class="note">loading…</div></div>
+        <div class="card"><h3>Finite-mathematics QML formulation</h3><div class="eq">|ψ(x)⟩ = ⊗<sub>m=1..6</sub> (cos(πx<sub>m</sub>/2)|0⟩ + sin(πx<sub>m</sub>/2)|1⟩)<br>K<sub>Q</sub>(x,z;γ) = ∏<sub>m</sub> cos²(π(x<sub>m</sub>−z<sub>m</sub>)/2) · exp(−γ Σ sin²(π(x<sub>m</sub>x<sub>m+1</sub>−z<sub>m</sub>z<sub>m+1</sub>)/2))<br>P<sub>Q</sub>(recov | x,t) = Σ<sub>i</sub> w<sub>i</sub>(t) K<sub>Q</sub>(x, x<sub>i</sub>),  h(t|x) = h<sub>0</sub>(t)(1+βJ)(1−0.35 P<sub>Q</sub>)</div><p class="note">The Gram matrix G<sub>ij</sub> = K<sub>Q</sub>(x<sub>i</sub>, x<sub>j</sub>) is verified positive semidefinite (λ<sub>min</sub> ≥ 0) on the synthetic training cohort.</p></div>
+      </div>
+    </section>
+
     <!-- ECONOMICS -->
     <section class="panel" id="tab-econ">
       <h2>Health economics · statistical prisms for valuation &amp; revenue</h2>
@@ -182,7 +240,11 @@
         <div class="card"><h3 id="fanTitle">Revenue fan chart</h3><canvas id="ecFan" width="900" height="420" style="height:360px"></canvas><div class="legend" id="fanLegend"></div></div>
         <div class="card"><h3 id="forestTitle">Prism comparison by region</h3><canvas id="ecForest" width="900" height="420" style="height:360px"></canvas><div class="legend" id="forestLegend"></div></div>
       </div>
-      <div class="card" style="margin-top:18px"><h3>Regional valuation</h3><div id="ecTable" style="overflow-x:auto"></div></div>
+      <div class="grid g2" style="margin-top:18px">
+        <div class="card"><h3 id="linesTitle">10-year revenue by product line &amp; EBITDA</h3><canvas id="ecLines" width="900" height="360" style="height:310px"></canvas><div class="legend" id="linesLegend"></div></div>
+        <div class="card"><h3 id="ceaTitle">Cost-effectiveness: QALYs &amp; Net Monetary Benefit</h3><canvas id="ecCea" width="900" height="360" style="height:310px"></canvas><div class="legend" id="ceaLegend"></div></div>
+      </div>
+      <div class="card" style="margin-top:18px"><h3>Regional valuation &amp; health economics</h3><div id="ecTable" style="overflow-x:auto"></div></div>
       <div class="grid g2" style="margin-top:18px">
         <div class="card"><h3>Physics → value link</h3><div id="ecLink" class="note"></div></div>
         <div class="card"><h3>Assumptions</h3><div id="ecAssume" class="note"></div></div>

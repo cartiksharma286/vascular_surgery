@@ -31,6 +31,7 @@ import ehr
 import elliptic
 import fem
 import optimize
+import qml_trajectories
 
 HERE = Path(__file__).resolve().parent
 OUTPUT = HERE / "Nature_Vascular_GI_BEM_FEM_Elliptic_Economics_Preprint.pdf"
@@ -235,6 +236,63 @@ def build_economics_figure(econ) -> io.BytesIO:
     return buf
 
 
+def build_qml_figure(qml_stent, qml_gi) -> io.BytesIO:
+    fig, axes = plt.subplots(1, 3, figsize=(10.5, 3.1), dpi=200)
+    plt.rcParams.update({"font.size": 8})
+    days = np.array(qml_stent["days"])
+
+    ax = axes[0]
+    p50 = np.array(qml_stent["p_recovery"]) * 100
+    p5 = np.array(qml_stent["p5"]) * 100
+    p95 = np.array(qml_stent["p95"]) * 100
+    p_rbf = np.array(qml_stent["p_classical"]) * 100
+    p_gi = np.array(qml_gi["p_recovery"]) * 100
+    ax.fill_between(days, p5, p95, color="#0e7490", alpha=0.16)
+    ax.plot(days, p50, "o-", color="#0e7490", lw=1.8, ms=3.5, label="Stent QML (p50, p5–p95)")
+    ax.plot(days, p_rbf, "--", color="#f59e0b", lw=1.4, label="Stent Classical RBF")
+    ax.plot(days, p_gi, "s-", color="#7c3aed", lw=1.5, ms=3.2, label="GI BEM QML (p50)")
+    ax.set_title("a) QML 90-Day Recovery Trajectory", fontsize=8.5, fontweight="bold")
+    ax.set_xlabel("Postoperative Day t")
+    ax.set_ylabel("Recovery Probability (%)")
+    ax.set_ylim(0, 102)
+    ax.grid(True, ls=":", alpha=0.5)
+    ax.legend(fontsize=6.5, frameon=False, loc="lower right")
+
+    ax = axes[1]
+    ax2 = ax.twinx()
+    l1 = ax.plot(days, qml_stent["hazard"], "o-", color="#e11d48", lw=1.6, ms=3.2, label="Hazard h(t) (/100 pt-d)")
+    l2 = ax2.plot(days, qml_stent["functional_score"], "s-", color="#0d9488", lw=1.6, ms=3.2, label="Functional Score")
+    ax.set_title("b) Hazard & Functional Recovery", fontsize=8.5, fontweight="bold")
+    ax.set_xlabel("Postoperative Day t")
+    ax.set_ylabel("Hazard (/100 pt-days)", color="#e11d48")
+    ax2.set_ylabel("Functional Score (0–100)", color="#0d9488")
+    ax.grid(True, ls=":", alpha=0.5)
+    lines = l1 + l2
+    ax.legend(lines, [l.get_label() for l in lines], fontsize=6.5, frameon=False, loc="center right")
+
+    ax = axes[2]
+    attrs = qml_stent["attributions"]
+    labels = [a["label"].replace(" (normalized)", "").replace(" / plaque", "") for a in attrs]
+    vals = [a["delta_30d"] * 100 for a in attrs]
+    cols = ["#0d9488" if v >= 0 else "#7c3aed" for v in vals]
+    y_pos = np.arange(len(labels))
+    ax.barh(y_pos, vals, color=cols, alpha=0.88)
+    ax.axvline(0, color="#334155", lw=0.9)
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(labels, fontsize=7)
+    ax.invert_yaxis()
+    ax.set_title("c) Quantum Kernel Attribution (dP_30d)", fontsize=8.5, fontweight="bold")
+    ax.set_xlabel("Delta P_30d (%) per +0.10 shift")
+    ax.grid(True, axis="x", ls=":", alpha=0.5)
+
+    fig.tight_layout(pad=1.0)
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=200)
+    plt.close(fig)
+    buf.seek(0)
+    return buf
+
+
 def build_pdf() -> None:
     # Compute all live results from the studio engines
     mod_tbl = elliptic.modulus_table()
@@ -247,6 +305,9 @@ def build_pdf() -> None:
     recs = ehr.generate_records(300, 0.2, 1)
     ehr_res = ehr.link_records(recs, 0.86)
     sched_res = ehr.schedule(ehr.generate_cases(24, 3), 3, 1)
+    qml_stent = qml_trajectories.predict_trajectory(procedure="stent", use_optimized=True)
+    qml_gi = qml_trajectories.predict_trajectory(procedure="gi", use_optimized=True)
+    qml_base = qml_trajectories.predict_trajectory(procedure="stent", use_optimized=False)
 
     link = economics.physics_link(
         stent_opt["baseline"]["J"],
@@ -257,11 +318,12 @@ def build_pdf() -> None:
     econ = economics.run_all(link)
 
     fig1_buf = build_physics_figure(bem_conv, fem_lame, stent_opt)
-    fig2_buf = build_economics_figure(econ)
+    fig2_buf = build_qml_figure(qml_stent, qml_gi)
+    fig3_buf = build_economics_figure(econ)
 
     # Header
-    para("ARTICLE PREPRINT  |  COMPUTATIONAL SURGERY, CONFORMAL GEOMETRY & HEALTH ECONOMICS", "kicker")
-    para("Elliptic-Moduli Conformal Partitioning, Boundary-Element GI Electrosurgery, Finite-Element Stent Mechanics, Heuristic EHR Processing, and Multi-Prism Health Economics", "title")
+    para("ARTICLE PREPRINT  |  COMPUTATIONAL SURGERY, QUANTUM MACHINE LEARNING & HEALTH ECONOMICS", "kicker")
+    para("Elliptic-Moduli Conformal Partitioning, Boundary-Element GI Electrosurgery, Finite-Element Stent Mechanics, Quantum-Kernel Postoperative Trajectories, and Multi-Prism Health Economics", "title")
     para("Vascular & GI Surgery Simulation Studio  |  Reproducible Computational Framework (US/Canada & Asia-Pacific)", "authors")
     story.append(HRFlowable(width="100%", thickness=0.8, color=colors.HexColor("#0e7490"), spaceAfter=6))
 
@@ -432,26 +494,69 @@ def build_pdf() -> None:
         Paragraph(fix("Table 4. Heuristic EHR deduplication and parallel-OR scheduling performance."), styles["caption"]),
     ]))
 
-    # Section 6: Health Economics with 5 Statistical Prisms
-    para("6. Health Economics with Five Statistical Prisms: US/Canada and Asia-Pacific", "h")
+    # Section 6: Quantum Machine Learning for Postoperative Clinical Trajectories
+    para("6. Quantum Machine Learning for Postoperative Clinical Trajectories", "h")
+    para(
+        "To project postoperative recovery probabilities across days t ∈ {0, 1, 3, 7, 14, 21, 30, 45, 60, 75, 90}, "
+        "each patient and surgical state is encoded as a 6-dimensional normalized feature vector x ∈ [0, 1]⁶ comprising "
+        "(1) age, (2) comorbidity index, (3) baseline lesion/plaque burden, (4) normalized mechanical/thermal risk J from "
+        "the FEM/BEM solvers, (5) procedure complexity, and (6) EHR scheduling delay. The state is mapped into a 6-qubit "
+        "Hilbert space via angle encoding and evaluated with a ZZ-entangling fidelity kernel:"
+    )
+    para("|ψ(x)&gt; = ∏<sub>m=1..6</sub> (cos(πx<sub>m</sub>/2)|0&gt; + sin(πx<sub>m</sub>/2)|1&gt;)", "eq", raw=True)
+    para("K<sub>Q</sub>(x, z; γ) = |&lt;ψ(x)|ψ(z)&gt;|<sup>2</sup> · exp(−γ ∑<sub>m=1..5</sub> sin<sup>2</sup>(π(x<sub>m</sub>x<sub>m+1</sub> − z<sub>m</sub>z<sub>m+1</sub>)/2))", "eq", raw=True)
+    qd = qml_stent["diagnostics"]
+    para(
+        f"Kernel ridge regression P_Q(recovery | x, t) = ∑ᵢ wᵢ(t) K_Q(x, xᵢ) is trained on N = {qd['n_train']} synthetic cohort "
+        f"trajectories and validated on {qd['n_val']} held-out cases, with daily complication hazard h(t | x) = h₀(t)(1 + βJ)(1 − 0.35 P_Q) "
+        f"and functional recovery score F(t | x) ∈ [0, 100]. On the training cohort, the quantum Gram matrix Gᵢⱼ = K_Q(xᵢ, xⱼ) "
+        f"is strictly positive semidefinite with λ_min(G) = {qd['gram_eig_min']:.4e} and "
+        f"effective rank {qd['effective_rank']:.2f}."
+    )
+
+    qs = qml_stent["summary"]
+    qb = qml_base["summary"]
+    qg = qml_gi["summary"]
+    t5_qml_rows = [
+        ["Cohort / Model", "30d Recovery", "90d Recovery", "30d Readmit", "30d AUROC", "Brier Score"],
+        ["Stent QML (Optimized J)", f"{qs['recovery_30d']*100:.1f}%", f"{qs['recovery_90d']*100:.1f}%", f"{qs['readmission_30d']*100:.1f}%", f"{qd['auroc_30d']:.3f}", f"{qd['brier_30d']:.3f}"],
+        ["Stent QML (Baseline J)", f"{qb['recovery_30d']*100:.1f}%", f"{qb['recovery_90d']*100:.1f}%", f"{qb['readmission_30d']*100:.1f}%", f"{qd['auroc_30d']:.3f}", f"{qd['brier_30d']:.3f}"],
+        ["GI BEM QML (Optimized J)", f"{qg['recovery_30d']*100:.1f}%", f"{qg['recovery_90d']*100:.1f}%", f"{qg['readmission_30d']*100:.1f}%", f"{qml_gi['diagnostics']['auroc_30d']:.3f}", f"{qml_gi['diagnostics']['brier_30d']:.3f}"],
+        ["Classical RBF Baseline", "—", "—", "—", f"{qd['auroc_classical_30d']:.3f}", f"{qd['brier_classical_30d']:.3f}"],
+    ]
+    story.append(KeepTogether([
+        make_table(t5_qml_rows, [44 * mm, 24 * mm, 24 * mm, 26 * mm, 26 * mm, 26 * mm]),
+        Paragraph(fix(f"Table 5. QML postoperative trajectory predictions and held-out validation metrics (N_train = {qd['n_train']}, N_val = {qd['n_val']})."), styles["caption"]),
+    ]))
+
+    story.append(KeepTogether([
+        Image(fig2_buf, width=172 * mm, height=51 * mm),
+        Paragraph(fix("Figure 2. QML postoperative clinical trajectories: (a) 0–90 day recovery probability with p5–p95 band and Classical RBF comparison; (b) daily complication hazard h(t) and functional score; (c) quantum kernel feature attribution."), styles["caption"]),
+    ]))
+
+    # Section 7: Health Economics with 5 Statistical Prisms & CEA
+    para("7. Health Economics, Revenue Projections & Cost-Effectiveness (US/Canada & Asia-Pacific)", "h")
     para(
         "To evaluate commercial and payer viability without relying on a single point forecast, we construct an illustrative "
         "10-year health-economic model across two macro-contexts—US/Canada (United States, Canada) and Asia-Pacific "
-        "(Japan, China, India, Australia)—spanning three product lines: cardiovascular stent FE planning ($220 base fee), "
-        "GI surgery BEM planning ($180 base fee), and the heuristic EHR platform ($45,000/site/year). Regional adoption "
-        "follows a delayed logistic curve S(t) = S_max / (1 + exp(−α(t − t_lead − t₀))) for t > t_lead, and cash flows "
-        "CFₜ = Rₜ(1 − c_COGS) − F_fixed are discounted at regional rate d to yield Net Present Value (NPV) and Enterprise "
-        "Value (EV) with Gordon terminal growth g = 2%."
+        "(Japan, China, India, Australia)—spanning four product lines: cardiovascular stent FE planning ($220 base fee), "
+        "GI surgery BEM planning ($180 base fee), the heuristic EHR platform ($45,000/site/year), and the QML postoperative "
+        "trajectory suite ($140/case base fee). Regional adoption follows a delayed logistic curve "
+        "S(t) = S_max / (1 + exp(−α(t − t_lead − t₀))) for t > t_lead, and operating cash flows "
+        "CFₜ = Rₜ(1 − c_COGS) − F_fixed are discounted at regional rate d to yield NPV and Enterprise Value (EV) with "
+        "Gordon terminal growth g = 2%."
     )
     para(
-        "Crucially, the physics engines feed directly into payer economics via a linear-relative complication model "
-        "p = p₀(1 + κJ): reducing J_stent from "
-        f"{stent_opt['baseline']['J']:.4f} to {stent_opt['exhaustive']['J']:.4f} yields a "
+        "ICER = (C_fees − S_comp − S_readmit) / ΔQALY,    NMB = λ_WTP · ΔQALY − (C_fees − S_comp − S_readmit)", "eq"
+    )
+    para(
+        "Crucially, both the physics engines and QML trajectory stratification feed directly into payer economics. "
+        f"Reducing J_stent from {stent_opt['baseline']['J']:.4f} to {stent_opt['exhaustive']['J']:.4f} yields a "
         f"{link['cv']['relative_risk_reduction']*100:.1f}% relative risk reduction in stent complications, while GI BEM "
-        f"optimization yields a {link['gi']['relative_risk_reduction']*100:.1f}% reduction. Across all six markets, "
-        f"payer savings per procedure exceed software fees, with value-to-fee ratios ranging from "
-        f"{econ['value_ratios']['india']['cv']['value_ratio']:.2f}× (India CV) to "
-        f"{econ['value_ratios']['us']['gi']['value_ratio']:.2f}× (US GI). "
+        f"optimization yields a {link['gi']['relative_risk_reduction']*100:.1f}% reduction; QML stratification adds "
+        f"{econ['qml_value']['cv']['readmission_reduction']*100:.1f}% (CV) and "
+        f"{econ['qml_value']['gi']['readmission_reduction']*100:.1f}% (GI) 30-day readmission reductions and "
+        f"+{econ['qml_value']['cv']['qaly_per_case']:.3f} to +{econ['qml_value']['gi']['qaly_per_case']:.3f} QALYs/case. "
         "Uncertainty is triangulated through five independent statistical prisms: "
         "(1) Deterministic Low/Base/High scenarios; (2) Monte Carlo simulation (n = 3,000) over Beta adoption ceilings, "
         "lognormal pricing, and discount-rate uncertainty; (3) Residual Bootstrap (n = 600) of a 36-month synthetic pilot "
@@ -459,39 +564,41 @@ def build_pdf() -> None:
         "t-distribution prediction intervals (df = 34)."
     )
 
-    t5_rows = [["Region / Context", "10-Yr Rev (Base)", "MC Rev (p5–p95)", "NPV (Base)", "MC NPV (p50)", "EV (Base)", "Value Ratio (CV/GI)"]]
+    t6_rows = [["Region / Context", "10-Yr Rev", "MC Rev (p5–p95)", "NPV (Base)", "EV (Base)", "QALYs (10y)", "NMB (10y)", "Payer ROI"]]
     for key in ("us", "canada", "japan", "china", "india", "australia"):
         r = econ["regions"][key]
         mc = r["monte_carlo"]
-        vr = econ["value_ratios"][key]
-        t5_rows.append([
+        c = econ["cea"][key]
+        t6_rows.append([
             r["name"],
             usd_m(r["cumulative_revenue"]),
             f"{usd_m(mc['cumulative_revenue']['p5'])}–{usd_m(mc['cumulative_revenue']['p95'])}",
             usd_m(r["npv"]),
-            usd_m(mc["npv"]["p50"]),
             usd_m(r["ev"]),
-            f"{vr['cv']['value_ratio']:.2f}× / {vr['gi']['value_ratio']:.2f}×",
+            f"{c['qalys_gained_10y']:,.0f}",
+            usd_m(c["nmb_10y"]),
+            f"{c['payer_roi']:.2f}×",
         ])
     for ck, cname in (("us_canada", "US/Canada Total"), ("asia_pacific", "Asia-Pacific Total")):
         c = econ["contexts"][ck]
-        t5_rows.append([
+        t6_rows.append([
             cname,
             usd_m(c["cumulative_revenue"]),
             f"{usd_m(c['cumulative_quantiles']['p5'])}–{usd_m(c['cumulative_quantiles']['p95'])}",
             usd_m(c["npv"]),
-            usd_m(c["npv_quantiles"]["p50"]),
             usd_m(c["ev"]),
+            f"{c['qalys_gained_10y']:,.0f}",
+            usd_m(c["nmb_10y"]),
             "—",
         ])
     story.append(KeepTogether([
-        make_table(t5_rows, [28 * mm, 22 * mm, 32 * mm, 20 * mm, 22 * mm, 22 * mm, 24 * mm]),
-        Paragraph(fix("Table 5. Illustrative 10-year health-economic valuation across US/Canada and Asia-Pacific (USD-equivalent)."), styles["caption"]),
+        make_table(t6_rows, [27 * mm, 19 * mm, 29 * mm, 19 * mm, 19 * mm, 20 * mm, 20 * mm, 17 * mm]),
+        Paragraph(fix("Table 6. Illustrative 10-year health-economic valuation, QALYs gained, Net Monetary Benefit (NMB), and Payer ROI across US/Canada and Asia-Pacific (USD-equivalent)."), styles["caption"]),
     ]))
 
     story.append(KeepTogether([
-        Image(fig2_buf, width=172 * mm, height=52 * mm),
-        Paragraph(fix("Figure 2. Multi-prism health economics: (a) 10-year Monte Carlo revenue fans for US/Canada vs Asia-Pacific; (b) Regional NPV medians with p5–p95 intervals."), styles["caption"]),
+        Image(fig3_buf, width=172 * mm, height=52 * mm),
+        Paragraph(fix("Figure 3. Multi-prism health economics: (a) 10-year Monte Carlo revenue fans for US/Canada vs Asia-Pacific; (b) Regional NPV medians with p5–p95 intervals."), styles["caption"]),
     ]))
 
     # Prism consistency summary
@@ -506,14 +613,14 @@ def build_pdf() -> None:
         f"(90% credible interval {us_bay['cri_low']*100:.1f}%–{us_bay['cri_high']*100:.1f}%)."
     )
 
-    # Section 7: Limitations & References
-    para("7. Scope, Limitations, and Reproducibility", "h")
+    # Section 8: Limitations & References
+    para("8. Scope, Limitations, and Reproducibility", "h")
     para(
-        "The 2-D Laplace BEM and small-strain CST FEM are idealized teaching and design-ranking surrogates rather than "
-        "3-D nonlinear patient-specific surgical planners. Similarly, EHR cohorts are synthetic and economic market "
-        "parameters are illustrative archetypes rather than forecasts. All 30 unit and API tests pass against the live "
-        "Flask application (port 5050), and every figure and table in this preprint is regenerated deterministically from "
-        "make_preprint.py."
+        "The 2-D Laplace BEM, small-strain CST FEM, and 6-qubit QML kernel trajectory model are idealized teaching and "
+        "design-ranking surrogates rather than 3-D nonlinear patient-specific surgical planners. Similarly, EHR and "
+        "postoperative cohorts are synthetic and economic market parameters are illustrative archetypes rather than forecasts. "
+        "All unit and API tests pass against the live Flask application (port 5095), and every figure and table in this "
+        "preprint is regenerated deterministically from make_preprint.py."
     )
 
     para("References", "h")
@@ -523,7 +630,8 @@ def build_pdf() -> None:
         "3. Hughes, T. J. R. The Finite Element Method: Linear Static and Dynamic Finite Element Analysis (Dover, 2000).",
         "4. Winkler, W. E. String comparator metrics and enhanced decision rules in the Fellegi-Sunter model of record linkage. Proc. Sect. Surv. Res. Methods Am. Stat. Assoc. 354–359 (1990).",
         "5. Kirkpatrick, S., Gelatt, C. D. & Vecchi, M. P. Optimization by simulated annealing. Science 220, 671–680 (1983).",
-        "6. Drummond, M. F. et al. Methods for the Economic Evaluation of Health Care Programmes (Oxford Univ. Press, 2015).",
+        "6. Havlíček, V. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019).",
+        "7. Drummond, M. F. et al. Methods for the Economic Evaluation of Health Care Programmes (Oxford Univ. Press, 2015).",
     ]
     for r in refs:
         para(r, "ref")

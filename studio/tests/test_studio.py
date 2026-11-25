@@ -11,6 +11,7 @@ import ehr
 import elliptic
 import fem
 import optimize
+import qml_trajectories
 
 
 class EllipticTests(unittest.TestCase):
@@ -193,9 +194,11 @@ class EconomicsTests(unittest.TestCase):
             self.assertAlmostEqual(sum(v["revenue"]), v["cumulative_revenue"], places=3)
             for ln in ("cv", "gi", "ehr"):
                 pass
-            total = [sum(v["revenue_by_line"][ln][i] for ln in ("cv", "gi", "ehr")) for i in range(10)]
+            total = [sum(v["revenue_by_line"][ln][i] for ln in ("cv", "gi", "ehr", "qml")) for i in range(10)]
             for a, b in zip(total, v["revenue"]):
                 self.assertAlmostEqual(a, b, places=3)
+            self.assertGreater(r["cea"][key]["qalys_gained_10y"], 0.0)
+            self.assertGreater(r["cea"][key]["payer_roi"], 1.0)
             fan = v["monte_carlo"]["revenue_fan"]
             for i in range(10):
                 self.assertLessEqual(fan["p5"][i], fan["p50"][i] + 1e-6)
@@ -256,6 +259,37 @@ class ApiTests(unittest.TestCase):
         self.assertTrue(h["success"])
         self.assertGreater(h["reduction_ratio"], 0.9)
         self.assertEqual(self.client.post("/api/ehr", json={"n": 5}).status_code, 400)
+        q = self.client.post("/api/qml", json={"procedure": "stent", "age": 65, "use_optimized": True}).get_json()
+        self.assertTrue(q["success"])
+        self.assertEqual(len(q["days"]), len(q["p_recovery"]))
+        self.assertIn("gram_trace", q["diagnostics"])
+        self.assertEqual(self.client.post("/api/qml", json={"procedure": "unknown"}).status_code, 400)
+        self.assertEqual(self.client.post("/api/qml", json={"age": 10}).status_code, 400)
+
+
+class QmlTests(unittest.TestCase):
+    def test_kernel_properties_and_psd_gram(self):
+        import numpy as np
+        x = np.array([0.2, 0.4, 0.6, 0.3, 0.45, 0.25])
+        z = np.array([0.5, 0.2, 0.8, 0.6, 0.45, 0.40])
+        self.assertAlmostEqual(qml_trajectories.quantum_kernel(x, x), 1.0, places=12)
+        self.assertAlmostEqual(qml_trajectories.quantum_kernel(x, z), qml_trajectories.quantum_kernel(z, x), places=12)
+        self.assertGreaterEqual(qml_trajectories.quantum_kernel(x, z), 0.0)
+        self.assertLessEqual(qml_trajectories.quantum_kernel(x, z), 1.0)
+        m = qml_trajectories.fit_qml_model()
+        self.assertGreaterEqual(m["gram_eig_min"], -1e-9)
+        self.assertGreater(m["auroc_30d"], 0.65)
+
+    def test_trajectory_monotonicity_and_physics_gain(self):
+        t_opt = qml_trajectories.predict_trajectory(procedure="stent", use_optimized=True)
+        t_base = qml_trajectories.predict_trajectory(procedure="stent", use_optimized=False)
+        p = t_opt["p_recovery"]
+        self.assertEqual(p, sorted(p))
+        for lo, mid, hi in zip(t_opt["p5"], p, t_opt["p95"]):
+            self.assertLessEqual(lo, mid + 1e-9)
+            self.assertLessEqual(mid, hi + 1e-9)
+        self.assertGreaterEqual(t_opt["summary"]["recovery_30d"], t_base["summary"]["recovery_30d"])
+        self.assertLessEqual(t_opt["summary"]["readmission_30d"], t_base["summary"]["readmission_30d"])
 
 
 if __name__ == "__main__":

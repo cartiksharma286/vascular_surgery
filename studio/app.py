@@ -24,6 +24,7 @@ import ehr
 import elliptic
 import fem
 import optimize
+import qml_trajectories
 
 HERE = Path(__file__).resolve().parent
 PREPRINT = HERE / "Nature_Vascular_GI_BEM_FEM_Elliptic_Economics_Preprint.pdf"
@@ -223,6 +224,32 @@ def api_ehr():
     })
 
 
+# -------------------------------------------------------- QML trajectories
+
+@lru_cache(maxsize=64)
+def _qml_cached(proc: str, age: float, comorb: float, burden: float, opt: bool, delay: float, gamma: float):
+    return qml_trajectories.predict_trajectory(
+        procedure=proc, age=age, comorbidity=comorb, burden=burden,
+        use_optimized=opt, ehr_delay=delay, gamma=gamma,
+    )
+
+
+@app.route("/api/qml", methods=["POST", "GET"])
+def api_qml():
+    payload = request.get_json(silent=True) or {}
+    proc = str(payload.get("procedure", "stent"))
+    if proc not in qml_trajectories.PROCEDURES:
+        raise ValueError(f"procedure must be one of {list(qml_trajectories.PROCEDURES)}")
+    age = round(num(payload, "age", 64.0, 35.0, 90.0), 1)
+    comorb = round(num(payload, "comorbidity", 0.35, 0.0, 1.0), 3)
+    burden = round(num(payload, "burden", 0.50, 0.0, 1.0), 3)
+    opt = bool(payload.get("use_optimized", True))
+    delay = round(num(payload, "ehr_delay", 0.25, 0.0, 1.0), 3)
+    gamma = round(num(payload, "gamma", 0.25, 0.0, 1.5), 3)
+    res = _qml_cached(proc, age, comorb, burden, opt, delay, gamma)
+    return jsonify({"success": True, **res})
+
+
 # --------------------------------------------------------------------- economics
 
 @lru_cache(maxsize=1)
@@ -242,6 +269,7 @@ def api_economics():
 def api_summary():
     v, f, s, g, e = _bem_verify(), _fem_verify(), _stent_opt(), _gi_opt(), _economics()
     res, sched = _ehr_cached(300, 0.2, 0.86, 1)
+    q = _qml_cached("stent", 64.0, 0.35, 0.50, True, 0.25, 0.25)
     rows = v["convergence"]
     return jsonify({
         "success": True,
@@ -250,7 +278,8 @@ def api_summary():
         "stent": {"exhaustive": s["exhaustive"], "annealing_evals": s["annealing"]["evaluations"], "baseline_J": s["baseline"]["J"]},
         "gi": {"best_J": min(g["exhaustive"]["J"], g["annealing"]["J"]), "baseline_J": g["baseline"]["J"]},
         "ehr": {"f1": res["metrics"]["f1"], "reduction": res["reduction_ratio"], "schedule_gain": sched["improvement_vs_best_rule"]},
-        "contexts": {k: {"cumulative": c["cumulative_revenue"], "npv": c["npv"], "ev": c["ev"]} for k, c in e["contexts"].items()},
+        "qml": {"recovery_90d": q["summary"]["recovery_90d"], "auroc_30d": q["diagnostics"]["auroc_30d"], "readmission_30d": q["summary"]["readmission_30d"]},
+        "contexts": {k: {"cumulative": c["cumulative_revenue"], "npv": c["npv"], "ev": c["ev"], "nmb": c["nmb_10y"]} for k, c in e["contexts"].items()},
     })
 
 
@@ -276,6 +305,7 @@ def preprint_download():
 def _warm():
     try:
         _bem_verify(); _fem_verify(); _stent_opt(); _gi_opt(); _economics(); _ehr_cached(300, 0.2, 0.86, 1)
+        _qml_cached("stent", 64.0, 0.35, 0.50, True, 0.25, 0.25)
     except Exception as exc:  # pragma: no cover - warm-up is best effort
         print("warm-up failed:", exc)
 
