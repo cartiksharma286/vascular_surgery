@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#050813">
+  <title>Vascular &amp; GI Surgery Simulation Studio</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="aurora"></div>
+  <canvas id="bgfx" aria-hidden="true"></canvas>
+  <header class="top">
+    <div class="top-inner">
+      <div class="brand"><div class="logo">∂Ω</div><div>SURGICAL SIMULATION STUDIO<small>BEM · FEM · ELLIPTIC MODULI · EHR · ECONOMICS</small></div></div>
+      <nav class="tabs" id="tabs">
+        <button data-tab="overview" class="active">Overview</button>
+        <button data-tab="gi">GI Surgery · BEM</button>
+        <button data-tab="stent">Stent Repair · FEM</button>
+        <button data-tab="elliptic">Elliptic Moduli</button>
+        <button data-tab="ehr">EHR Heuristics</button>
+        <button data-tab="econ">Health Economics</button>
+        <button data-tab="paper">Preprint</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- OVERVIEW -->
+    <section class="panel active" id="tab-overview">
+      <div class="hero">
+        <div class="eyebrow">COMPUTATIONAL SURGERY · FINITE MATHEMATICS</div>
+        <h1>From boundary elements to balance sheets.</h1>
+        <p class="lede">A boundary element model of electrosurgery in the bowel wall, a finite element model of stent repair, elliptic-modulus optimization and conformal grid partitioning, heuristic EHR processing, and multi-prism health economics for US/Canada and Asia-Pacific contexts.</p>
+      </div>
+      <div class="notice"><b>Read this first.</b> Idealized 2-D teaching models on <b>synthetic data</b>. They are not validated surgical-planning tools and make no clinical claims. Every market parameter is an illustrative assumption, and no revenue figure is a forecast.</div>
+      <div class="grid g4" id="heroTiles"></div>
+      <div class="grid g3" style="margin-top:18px">
+        <div class="card"><h3>◎ Boundary element method</h3><p class="note" style="margin-top:0">Laplace conduction around an electrode in a bowel-wall cross-section. Verified against the exact conformal modulus of the eccentric ring.</p><canvas id="ovBem" class="stage" width="420" height="420"></canvas></div>
+        <div class="card"><h3>⬡ Finite element method</h3><p class="note" style="margin-top:0">Plane-strain artery with plaque and a stent hoop on a conformally graded mesh. Verified against the exact Lamé solution.</p><canvas id="ovFem" class="stage" width="420" height="420"></canvas></div>
+        <div class="card"><h3>✦ Elliptic moduli</h3><p class="note" style="margin-top:0">The modulus k, K′/K and ring modulus drive grid partitioning and the stent-design coordinate.</p><canvas id="ovEll" class="stage" width="420" height="420"></canvas></div>
+      </div>
+    </section>
+
+    <!-- GI / BEM -->
+    <section class="panel" id="tab-gi">
+      <h2>Gastrointestinal surgery · boundary element simulation</h2>
+      <p class="lede">Joule heating from an energy-device electrode in the bowel wall, on an idealized 2-D cross-section. The electrode (radius <i>a</i>, offset <i>e</i>) is held at potential 1; the serosal boundary is grounded.</p>
+      <div class="grid g-main" style="margin-top:16px">
+        <div class="card">
+          <canvas id="bemCanvas" class="stage" width="760" height="760"></canvas>
+          <div class="legend" id="bemLegend"></div>
+        </div>
+        <div class="grid" style="align-content:start">
+          <div class="card">
+            <h3>Controls</h3>
+            <div class="controls">
+              <div class="ctl"><label>Electrode radius a <b id="bemAv"></b></label><input type="range" id="bemA" min="0.5" max="1.8" step="0.05" value="1.0"></div>
+              <div class="ctl"><label>Offset from centre e <b id="bemEv"></b></label><input type="range" id="bemE" min="0" max="2.5" step="0.05" value="1.0"></div>
+              <div class="ctl"><label>Injury threshold (fraction of peak heat) <b id="bemFv"></b></label><input type="range" id="bemF" min="0.05" max="0.6" step="0.01" value="0.2"></div>
+            </div>
+            <div class="row"><div class="seg" id="bemMode"><button data-m="heat" class="on">Joule heating</button><button data-m="pot">Potential</button></div>
+              <button class="btn" id="bemOpt">⚡ Optimize electrode</button></div>
+            <div class="err" id="bemErr"></div>
+          </div>
+          <div class="grid g2">
+            <div class="tile cyan"><div class="k">RING MODULUS ln ρ</div><div class="v" id="mRho">—</div><div class="s" id="mRes">—</div></div>
+            <div class="tile green"><div class="k">CURRENT: BEM vs EXACT</div><div class="v" id="mCur">—</div><div class="s" id="mCurS">—</div></div>
+            <div class="tile amber"><div class="k">INJURY ZONE</div><div class="v" id="mZone">—</div><div class="s">fraction of wall area</div></div>
+            <div class="tile rose"><div class="k">SEROSAL EXPOSURE</div><div class="v" id="mSero">—</div><div class="s">peak heat at serosa / peak</div></div>
+            <div class="tile violet"><div class="k">LESION COVERAGE</div><div class="v" id="mLes">—</div><div class="s">target ≥ 90%</div></div>
+            <div class="tile magenta"><div class="k">IMPEDANCE WINDOW</div><div class="v" id="mWin">—</div><div class="s" id="mWinS">—</div></div>
+          </div>
+          <div class="card"><h3>Optimization result</h3><div id="bemOptOut" class="note">Run the optimizer to compare the baseline electrode with exhaustive search and simulated annealing.</div></div>
+        </div>
+      </div>
+      <div class="grid g2" style="margin-top:18px">
+        <div class="card"><h3>Verification against the exact solution</h3><div id="bemVerify" class="note">loading…</div></div>
+        <div class="card"><h3>Method</h3><div class="eq">c<sub>i</sub> u<sub>i</sub> + Σ<sub>j</sub> H<sub>ij</sub> u<sub>j</sub> = Σ<sub>j</sub> G<sub>ij</sub> q<sub>j</sub>,  u* = −(1/2π) ln r<br>Joule heating  q = σ|∇u|²<br>I = 2πσV / ln ρ,  cosh(ln ρ) = (R² + a² − e²)/(2Ra)</div><p class="note">The ring modulus ln ρ is the exact conformal modulus of the eccentric domain; it gives the electrode impedance and a benchmark for the numerical current.</p></div>
+      </div>
+    </section>
+
+    <!-- STENT / FEM -->
+    <section class="panel" id="tab-stent">
+      <h2>Cardiovascular stent repair · finite element simulation</h2>
+      <p class="lede">Plane-strain artery cross-section with a fibrous plaque crescent and a connected stent hoop. The balloon expands the lumen to a target gain, is withdrawn, and the tissue recoils against the hoop (eigenstrain model).</p>
+      <div class="grid g-main" style="margin-top:16px">
+        <div class="card">
+          <canvas id="femCanvas" class="stage" width="760" height="760"></canvas>
+          <div class="legend"><span><i style="background:linear-gradient(90deg,#0d0887,#cc4778,#f0f921)"></i>von Mises stress (MPa)</span><span><i style="background:#f5c542"></i>stent hoop</span><span><i style="background:transparent;border:1px dashed #22d3ee"></i>plaque</span><span id="femPhase"></span></div>
+        </div>
+        <div class="grid" style="align-content:start">
+          <div class="card">
+            <h3>Design controls</h3>
+            <div class="controls">
+              <div class="ctl"><label>Struts around circumference <b id="fnV"></b></label><input type="range" id="fn" min="0" max="32" step="1" value="12"></div>
+              <div class="ctl"><label>Strut thickness (layers) <b id="flV"></b></label><input type="range" id="fl" min="1" max="3" step="1" value="1"></div>
+              <div class="ctl"><label>Target lumen gain <b id="fgV"></b></label><input type="range" id="fg" min="0.04" max="0.16" step="0.01" value="0.10"></div>
+              <div class="ctl"><label>Plaque arc <b id="faV"></b></label><input type="range" id="fa" min="0" max="200" step="10" value="120"></div>
+              <div class="ctl"><label>Tissue permanent-set fraction <b id="fpV"></b></label><input type="range" id="fp" min="0.3" max="0.8" step="0.05" value="0.55"></div>
+              <div class="ctl"><label>Stress limit (MPa) <b id="fsV"></b></label><input type="range" id="fs" min="0.1" max="0.6" step="0.01" value="0.25"></div>
+            </div>
+            <div class="row"><button class="btn" id="femPlay">▶ Deploy &amp; release</button><div class="seg" id="femMode"><button data-m="deploy" class="on">Deployed</button><button data-m="after">After recoil</button></div><button class="btn ghost" id="femOpt">⚡ Optimize stent</button></div>
+            <div class="err" id="femErr"></div>
+          </div>
+          <div class="grid g2">
+            <div class="tile green"><div class="k">RETAINED LUMEN GAIN</div><div class="v" id="fRet">—</div><div class="s" id="fRetS">—</div></div>
+            <div class="tile amber"><div class="k">OVERSTRESS (DEPLOYED)</div><div class="v" id="fOver">—</div><div class="s">tissue area above limit</div></div>
+            <div class="tile cyan"><div class="k">PEAK TISSUE STRESS</div><div class="v" id="fMax">—</div><div class="s" id="fMaxS">—</div></div>
+            <div class="tile violet"><div class="k">METAL BURDEN</div><div class="v" id="fMetal">—</div><div class="s">strut coverage × layers</div></div>
+          </div>
+          <div class="card"><h3>Optimization result</h3><div id="femOptOut" class="note">Run the optimizer to compare exhaustive search, simulated annealing and golden-section in the elliptic modulus k.</div></div>
+        </div>
+      </div>
+      <div class="grid g2" style="margin-top:18px">
+        <div class="card"><h3>Verification: Lamé solution &amp; conformal grading</h3><div id="femVerify" class="note">loading…</div></div>
+        <div class="card"><h3>Method</h3><div class="eq">K u = f,  K = Σ<sub>e</sub> A<sub>e</sub> B<sup>T</sup> D B   (CST triangles, plane strain)<br>recoil:  K u = Σ<sub>e</sub> A<sub>e</sub> B<sup>T</sup> D ε*,  ε* = λ ε<sub>dep</sub><br>J = recoil loss + w<sub>m</sub>·metal burden + w<sub>o</sub>·overstress</div><p class="note">Linear small-strain surrogate that ranks designs; it is not a large-strain deployment model.</p></div>
+      </div>
+    </section>
+
+    <!-- ELLIPTIC -->
+    <section class="panel" id="tab-elliptic">
+      <h2>Elliptic moduli · optimization coordinate &amp; grid partitioning</h2>
+      <p class="lede">A rectangle <i>a</i> × <i>b</i> has elliptic modulus <i>k</i> with K′(k)/K(k) = 2b/a. The ring maps to a rectangle by ln z, so conformally square cells use geometric radii in a fixed ratio to the angular count.</p>
+      <div class="grid g3" style="margin-top:16px">
+        <div class="card"><h3>Conformal grid (squares in ln r, θ)</h3><canvas id="ellConf" class="stage" width="520" height="520"></canvas><div class="note" id="ellConfN"></div></div>
+        <div class="card"><h3>Uniform radial grid (same cell count)</h3><canvas id="ellUni" class="stage" width="520" height="520"></canvas><div class="note" id="ellUniN"></div></div>
+        <div class="card"><h3>K′/K and strut density vs k</h3><canvas id="ellCurve" class="stage" width="520" height="520"></canvas><div class="legend"><span><i style="background:#22d3ee"></i>K′/K</span><span><i style="background:#fbbf24"></i>struts n(k)</span></div></div>
+      </div>
+      <div class="grid g-main" style="margin-top:18px">
+        <div class="card">
+          <h3>Controls</h3>
+          <div class="controls">
+            <div class="ctl"><label>Outer / inner radius ratio r<sub>o</sub>/r<sub>i</sub> <b id="eRv"></b></label><input type="range" id="eR" min="1.3" max="6" step="0.1" value="2"></div>
+            <div class="ctl"><label>Angular cells n<sub>θ</sub> <b id="eNv"></b></label><input type="range" id="eN" min="16" max="96" step="4" value="48"></div>
+            <div class="ctl"><label>Elliptic modulus k <b id="eKv"></b></label><input type="range" id="eK" min="0.05" max="0.98" step="0.01" value="0.5"></div>
+          </div>
+          <div class="grid g4" id="ellTiles"></div>
+          <div class="err" id="ellErr"></div>
+        </div>
+        <div class="card"><h3>Modulus table &amp; identities</h3><div id="ellTable"></div><div class="eq" style="margin-top:12px">q = e<sup>−πK′/K</sup>,  k = θ₂²/θ₃²<br>ln ρ = arccosh[(R² + a² − e²)/(2Ra)]<br>n<sub>r</sub> = round(n<sub>θ</sub> ln(r<sub>o</sub>/r<sub>i</sub>)/2π)<br>n(k) = 2πr / b,  b = a K′(k)/(2K(k))</div></div>
+      </div>
+    </section>
+
+    <!-- EHR -->
+    <section class="panel" id="tab-ehr">
+      <h2>EHR processing · heuristic record linkage &amp; surgical scheduling</h2>
+      <p class="lede">Multi-pass phonetic blocking, Jaro–Winkler scoring and union-find clustering on synthetic records, plus priority-rule and simulated-annealing scheduling of operating rooms.</p>
+      <div class="notice">All records are synthetic. No real patient data is used.</div>
+      <div class="grid g-main">
+        <div class="card"><h3>Linkage network (clusters of records judged to refer to one patient)</h3><canvas id="ehrNet" class="stage" width="800" height="640" style="aspect-ratio:5/4"></canvas>
+          <div class="legend"><span><i style="background:#34d399"></i>correct link</span><span><i style="background:#fb7185"></i>false link</span><span><i style="background:#fbbf24"></i>missed duplicate</span></div></div>
+        <div class="grid" style="align-content:start">
+          <div class="card"><h3>Controls</h3><div class="controls">
+            <div class="ctl"><label>Unique patients <b id="hnV"></b></label><input type="range" id="hn" min="60" max="800" step="20" value="300"></div>
+            <div class="ctl"><label>Duplicate rate <b id="hdV"></b></label><input type="range" id="hd" min="0.05" max="0.4" step="0.01" value="0.2"></div>
+            <div class="ctl"><label>Match threshold <b id="htV"></b></label><input type="range" id="ht" min="0.6" max="0.98" step="0.01" value="0.86"></div>
+            <div class="ctl"><label>Random seed <b id="hsV"></b></label><input type="range" id="hs" min="1" max="50" step="1" value="1"></div></div><div class="err" id="ehrErr"></div></div>
+          <div class="grid g2">
+            <div class="tile green"><div class="k">F1 SCORE</div><div class="v" id="hF1">—</div><div class="s" id="hPR">—</div></div>
+            <div class="tile cyan"><div class="k">COMPARISONS SAVED</div><div class="v" id="hRR">—</div><div class="s" id="hRRS">—</div></div>
+            <div class="tile amber"><div class="k">SCHEDULE GAIN</div><div class="v" id="hSG">—</div><div class="s" id="hSGS">—</div></div>
+            <div class="tile violet"><div class="k">ENTITIES</div><div class="v" id="hEnt">—</div><div class="s" id="hEntS">—</div></div>
+          </div>
+          <div class="card"><h3>Precision / recall vs threshold</h3><canvas id="ehrPR" class="wide" width="640" height="260"></canvas></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:18px"><h3>Operating-room schedule (annealed) · weighted tardiness</h3><canvas id="ehrGantt" width="1200" height="300" style="height:300px"></canvas>
+        <div class="legend"><span><i style="background:#22d3ee"></i>low priority</span><span><i style="background:#a78bfa"></i>medium</span><span><i style="background:#e879f9"></i>high</span><span><i style="background:transparent;border:2px solid #fb7185"></i>finishes after due time</span></div>
+        <div id="ehrRules" class="note"></div></div>
+    </section>
+
+    <!-- ECONOMICS -->
+    <section class="panel" id="tab-econ">
+      <h2>Health economics · statistical prisms for valuation &amp; revenue</h2>
+      <p class="lede">Six regions in two contexts, viewed through five statistical prisms. All market parameters are illustrative archetypes, and values are USD-equivalent.</p>
+      <div class="notice">Illustrative scenario models, not market data or forecasts. Regional parameters, prices and adoption curves are assumptions chosen to demonstrate the method.</div>
+      <div class="row"><div class="seg" id="ecCtx"><button data-c="us_canada" class="on">US &amp; Canada</button><button data-c="asia_pacific">Asia-Pacific</button></div>
+        <div class="seg" id="ecPrism"><button data-p="scenario">Scenario</button><button data-p="mc" class="on">Monte Carlo</button><button data-p="boot">Bootstrap + regression</button><button data-p="bayes">Bayesian</button></div></div>
+      <div class="grid g4" id="ecTiles" style="margin-top:8px"></div>
+      <div class="grid g2" style="margin-top:18px">
+        <div class="card"><h3 id="fanTitle">Revenue fan chart</h3><canvas id="ecFan" width="900" height="420" style="height:360px"></canvas><div class="legend" id="fanLegend"></div></div>
+        <div class="card"><h3 id="forestTitle">Prism comparison by region</h3><canvas id="ecForest" width="900" height="420" style="height:360px"></canvas><div class="legend" id="forestLegend"></div></div>
+      </div>
+      <div class="card" style="margin-top:18px"><h3>Regional valuation</h3><div id="ecTable" style="overflow-x:auto"></div></div>
+      <div class="grid g2" style="margin-top:18px">
+        <div class="card"><h3>Physics → value link</h3><div id="ecLink" class="note"></div></div>
+        <div class="card"><h3>Assumptions</h3><div id="ecAssume" class="note"></div></div>
+      </div>
+    </section>
+
+    <!-- PREPRINT -->
+    <section class="panel" id="tab-paper">
+      <h2>Nature-style preprint</h2>
+      <p class="lede">Finite-mathematics preprint with the BEM, FE, elliptic-moduli, heuristic and economics derivations and results, in the US/Canada and Asia-Pacific contexts.</p>
+      <div class="card" style="margin-top:16px;max-width:780px">
+        <h3>Boundary and finite element simulation, elliptic-modulus optimization and heuristic EHR processing for gastrointestinal and cardiovascular surgery: finite mathematics and multi-prism health economics</h3>
+        <p class="note">Educational, not peer reviewed; not submitted to or published by Nature.</p>
+        <div class="row"><a class="btn" href="/preprint/view" target="_blank" style="text-decoration:none">📄 View PDF</a><a class="btn ghost" href="/preprint/download" style="text-decoration:none">⬇ Download</a></div>
+      </div>
+    </section>
+  </main>
+  <footer>Surgical Simulation Studio · idealized teaching models on synthetic data · not for clinical use</footer>
+  <script src="/static/app.js"></script>
+</body>
+</html>
