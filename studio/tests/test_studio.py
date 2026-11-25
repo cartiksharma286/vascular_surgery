@@ -6,6 +6,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import bem
+import cad_engine
 import economics
 import ehr
 import elliptic
@@ -265,6 +266,40 @@ class ApiTests(unittest.TestCase):
         self.assertIn("gram_trace", q["diagnostics"])
         self.assertEqual(self.client.post("/api/qml", json={"procedure": "unknown"}).status_code, 400)
         self.assertEqual(self.client.post("/api/qml", json={"age": 10}).status_code, 400)
+        db = self.client.get("/api/cad/database").get_json()
+        self.assertTrue(db["success"])
+        self.assertGreaterEqual(len(db["devices"]), 7)
+        c = self.client.post("/api/cad/recommend", json={"device_id": "coronary_des", "target_diameter_mm": 3.5, "target_length_mm": 20.0}).get_json()
+        self.assertTrue(c["success"])
+        self.assertEqual({e["format"] for e in c["exports"]}, {"DXF", "STL", "OBJ"})
+        dl = self.client.get(c["exports"][0]["url"])
+        self.assertEqual(dl.status_code, 200)
+        dl.close()
+        self.assertEqual(self.client.post("/api/cad/recommend", json={"device_id": "invalid"}).status_code, 400)
+
+
+class CadTests(unittest.TestCase):
+    def test_database_covers_all_categories(self):
+        cats = {d["category"] for d in cad_engine.DEVICE_DB.values()}
+        self.assertEqual(cats, {"stent", "gi_instrument", "electrocautery"})
+
+    def test_cad_exports_dxf_stl_obj_to_disk(self):
+        from pathlib import Path
+        for dev_id in ("coronary_des", "lap_grasper_jaw", "monopolar_hook"):
+            res = cad_engine.generate_and_export_cad(device_id=dev_id)
+            self.assertGreater(res["mesh"]["n_triangles"], 20)
+            self.assertEqual(len(res["gdt"]["frames"]), 5)
+            for exp in res["exports"]:
+                p = Path(exp["path"])
+                self.assertTrue(p.exists())
+                self.assertGreater(p.stat().st_size, 200)
+                txt = p.read_text(encoding="utf-8")
+                if exp["format"] == "STL":
+                    self.assertTrue(txt.startswith("solid "))
+                elif exp["format"] == "DXF":
+                    self.assertIn("3DFACE", txt)
+                elif exp["format"] == "OBJ":
+                    self.assertIn("\nv ", txt)
 
 
 class QmlTests(unittest.TestCase):

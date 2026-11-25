@@ -76,8 +76,8 @@ document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click
 function showTab(name) {
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   document.querySelectorAll('section.panel').forEach(s => s.classList.toggle('active', s.id === 'tab-' + name));
-  if (!tabLoaded[name]) { tabLoaded[name] = true; ({ gi: initGi, stent: initStent, elliptic: initElliptic, ehr: initEhr, qml: initQml, econ: initEcon }[name] || (() => {}))(); }
-  else requestAnimationFrame(() => ({ gi: () => bemData && drawBem($('bemCanvas'), bemData, bemMode), stent: () => femData && drawFemStatic(), elliptic: () => ellData && drawElliptic(), ehr: () => ehrData && drawEhr(), qml: () => qmlData && drawQml(), econ: () => econData && drawEcon() }[name] || (() => {}))());
+  if (!tabLoaded[name]) { tabLoaded[name] = true; ({ gi: initGi, stent: initStent, elliptic: initElliptic, ehr: initEhr, qml: initQml, cad: initCad, econ: initEcon }[name] || (() => {}))(); }
+  else requestAnimationFrame(() => ({ gi: () => bemData && drawBem($('bemCanvas'), bemData, bemMode), stent: () => femData && drawFemStatic(), elliptic: () => ellData && drawElliptic(), ehr: () => ehrData && drawEhr(), qml: () => qmlData && drawQml(), cad: () => cadData && drawCad(), econ: () => econData && drawEcon() }[name] || (() => {}))());
 }
 
 /* ============================================================== BEM rendering */
@@ -582,6 +582,196 @@ function initQml() {
     loadQml();
   });
   loadQml();
+}
+
+/* ================================================================ CAD & GD&T */
+let cadData = null, cadDb = null, cadPrio = 'balanced', cadSeq = 0;
+let cadRotY = 0.55, cadRotX = 0.32, cadDrag = null;
+
+function drawCadGdt() {
+  const d = cadData; if (!d) return;
+  const { ctx, W, H, r } = fit($('cadGdtCanvas'));
+  ctx.clearRect(0, 0, W, H);
+  // Blueprint background grid
+  ctx.fillStyle = '#061124'; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(34,211,238,0.07)'; ctx.lineWidth = r;
+  const gs = 24 * r;
+  for (let x = 0; x < W; x += gs) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let y = 0; y < H; y += gs) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  ctx.strokeStyle = 'rgba(34,211,238,0.32)'; ctx.lineWidth = 1.5 * r;
+  ctx.strokeRect(10 * r, 10 * r, W - 20 * r, H - 20 * r);
+
+  const spec = d.recommended, dev = d.device;
+  const D = spec.diameter_mm, L = spec.length_mm, ns = spec.n_struts, nr = spec.n_rings;
+  // Front/side orthographic view (left 62%) and End-on axial view (right 38%)
+  const sideCx = W * 0.34, sideCy = H * 0.48, endCx = W * 0.80, endCy = H * 0.48;
+  const scale = Math.min((W * 0.48) / Math.max(L, 8), (H * 0.46) / Math.max(D * 1.4, 4));
+  const halfL = 0.5 * L * scale, halfD = 0.5 * D * scale;
+
+  // Centerlines
+  ctx.save(); ctx.strokeStyle = 'rgba(251,191,36,0.55)'; ctx.setLineDash([10 * r, 4 * r, 3 * r, 4 * r]); ctx.lineWidth = 1.1 * r;
+  ctx.beginPath(); ctx.moveTo(sideCx - halfL - 28 * r, sideCy); ctx.lineTo(sideCx + halfL + 28 * r, sideCy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(endCx - halfD - 24 * r, endCy); ctx.lineTo(endCx + halfD + 24 * r, endCy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(endCx, endCy - halfD - 24 * r); ctx.lineTo(endCx, endCy + halfD + 24 * r); ctx.stroke();
+  ctx.restore();
+
+  // Side orthographic projection
+  ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 2 * r;
+  ctx.strokeRect(sideCx - halfL, sideCy - halfD, 2 * halfL, 2 * halfD);
+  if (dev.category === 'stent') {
+    ctx.strokeStyle = 'rgba(34,211,238,0.75)'; ctx.lineWidth = 1.3 * r;
+    for (let ring = 0; ring < nr; ring++) {
+      const z0 = sideCx - halfL + (ring + 0.5) / nr * (2 * halfL);
+      ctx.beginPath();
+      for (let k = 0; k <= 40; k++) {
+        const y = sideCy - halfD + (k / 40) * (2 * halfD);
+        const x = z0 + Math.sin(k / 40 * ns * Math.PI) * (halfL / nr * 0.55);
+        k === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+  } else {
+    // GI / Electrocautery internal section lines
+    ctx.strokeStyle = 'rgba(34,211,238,0.65)'; ctx.lineWidth = 1.3 * r;
+    for (let k = 1; k < 5; k++) {
+      const x = sideCx - halfL + k / 5 * (2 * halfL);
+      ctx.beginPath(); ctx.moveTo(x, sideCy - halfD); ctx.lineTo(x, sideCy + halfD); ctx.stroke();
+    }
+  }
+
+  // End-on axial orthographic projection
+  ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 2.2 * r;
+  ctx.beginPath(); ctx.arc(endCx, endCy, halfD, 0, Math.PI * 2); ctx.stroke();
+  const idR = Math.max(4 * r, halfD * (1 - Math.min(0.45, (2 * spec.wall_mm) / D)));
+  ctx.strokeStyle = 'rgba(34,211,238,0.7)'; ctx.lineWidth = 1.4 * r;
+  ctx.beginPath(); ctx.arc(endCx, endCy, idR, 0, Math.PI * 2); ctx.stroke();
+  for (let i = 0; i < ns; i++) {
+    const a = (i / ns) * Math.PI * 2;
+    ctx.beginPath(); ctx.moveTo(endCx + idR * Math.cos(a), endCy + idR * Math.sin(a));
+    ctx.lineTo(endCx + halfD * Math.cos(a), endCy + halfD * Math.sin(a)); ctx.stroke();
+  }
+
+  // Dimension lines & GD&T Datums
+  ctx.font = `${10.5 * r}px ui-monospace, monospace`;
+  const dimLine = (x1, y1, x2, y2, label, col = '#34d399') => {
+    ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 1.2 * r;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    ctx.fillText(label, (x1 + x2) / 2 - label.length * 3 * r, (y1 + y2) / 2 - 5 * r);
+  };
+  dimLine(sideCx - halfL, sideCy - halfD - 26 * r, sideCx + halfL, sideCy - halfD - 26 * r, `L = ${L.toFixed(2)} ± ${(0.003 * L).toFixed(2)} mm`);
+  dimLine(sideCx - halfL - 28 * r, sideCy - halfD, sideCx - halfL - 28 * r, sideCy + halfD, `Ø${D.toFixed(2)}`);
+
+  // Datum callout boxes A, B, C
+  const datumBox = (x, y, txt) => {
+    ctx.fillStyle = '#fbbf24'; ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 1.3 * r;
+    ctx.strokeRect(x - 10 * r, y - 10 * r, 20 * r, 20 * r);
+    ctx.fillText(txt, x - 3.5 * r, y + 4 * r);
+  };
+  datumBox(sideCx, sideCy + halfD + 30 * r, 'A');
+  datumBox(sideCx - halfL, sideCy + halfD + 30 * r, 'B');
+  datumBox(endCx + halfD + 26 * r, endCy, 'C');
+
+  // Title block & Feature Control Frame
+  ctx.fillStyle = '#e8eeff'; ctx.fillText(`ASME Y14.5 · ${dev.name.toUpperCase()} · ${dev.material}`, 20 * r, 28 * r);
+  ctx.fillStyle = '#22d3ee'; ctx.fillText(`[⌖ | Ø${(0.0072 * D).toFixed(3)} Ⓜ | A | B | C]   [⌭ | ${(0.006 * D).toFixed(3)}]   Ra ${dev.surface_ra_um} μm`, 20 * r, H - 20 * r);
+}
+
+function drawCad3d() {
+  const d = cadData; if (!d || !d.mesh) return;
+  const { ctx, W, H, r } = fit($('cad3dCanvas'));
+  ctx.clearRect(0, 0, W, H);
+  const V = d.mesh.vertices, F = d.mesh.faces;
+  if (!V.length || !F.length) return;
+  const cy = Math.cos(cadRotY), sy = Math.sin(cadRotY), cx = Math.cos(cadRotX), sx = Math.sin(cadRotX);
+  const proj = new Array(V.length);
+  let maxR = 1e-6;
+  for (let i = 0; i < V.length; i++) {
+    const [vx, vy, vz] = V[i];
+    const x1 = vx * cy + vz * sy, z1 = -vx * sy + vz * cy;
+    const y2 = vy * cx - z1 * sx, z2 = vy * sx + z1 * cx;
+    proj[i] = [x1, y2, z2];
+    maxR = Math.max(maxR, Math.abs(x1), Math.abs(y2));
+  }
+  const s = (Math.min(W, H) * 0.39) / maxR;
+  const ox = W / 2, oy = H / 2;
+  ctx.strokeStyle = 'rgba(34,211,238,0.42)'; ctx.lineWidth = 0.85 * r;
+  ctx.beginPath();
+  for (let i = 0; i < F.length; i++) {
+    const [a, b, c] = F[i];
+    const pa = proj[a], pb = proj[b], pc = proj[c];
+    ctx.moveTo(ox + pa[0] * s, oy - pa[1] * s);
+    ctx.lineTo(ox + pb[0] * s, oy - pb[1] * s);
+    ctx.lineTo(ox + pc[0] * s, oy - pc[1] * s);
+    ctx.lineTo(ox + pa[0] * s, oy - pa[1] * s);
+  }
+  ctx.stroke();
+}
+
+function drawCad() { drawCadGdt(); drawCad3d(); }
+
+async function loadCad() {
+  const seq = ++cadSeq;
+  const body = {
+    device_id: $('cadDev').value || 'coronary_des',
+    target_diameter_mm: +$('cadD').value,
+    target_length_mm: +$('cadL').value,
+    stiffness_factor: +$('cadS').value,
+    priority: cadPrio,
+  };
+  $('cadDV').textContent = `${body.target_diameter_mm.toFixed(1)} mm`;
+  $('cadLV').textContent = `${body.target_length_mm.toFixed(0)} mm`;
+  $('cadSV').textContent = body.stiffness_factor.toFixed(2);
+  try {
+    const d = await api('/api/cad/recommend', body); if (seq !== cadSeq) return;
+    cadData = d; $('cadErr').textContent = '';
+    const rec = d.recommended;
+    $('cadScore').textContent = `${(rec.gen_score * 100).toFixed(1)} · ${pct(d.confidence, 0)}`;
+    $('cadScoreS').textContent = `k = ${rec.elliptic_k.toFixed(3)} · struts ${rec.n_struts} × ${rec.n_rings} rings`;
+    $('cadMesh').textContent = `${d.mesh.n_triangles.toLocaleString()} tris`;
+    $('cadMeshS').textContent = `${d.mesh.n_vertices.toLocaleString()} vertices · wall ${rec.wall_mm} mm`;
+    $('cadExports').innerHTML = `<div class="row" style="gap:8px;flex-wrap:wrap">${d.exports.map(e =>
+      `<a class="btn ghost" href="${e.url}" style="text-decoration:none">⬇ ${e.format} (${(e.size_bytes / 1024).toFixed(1)} KB)</a>`).join('')}</div>` +
+      `<p class="note" style="margin-top:8px">Saved to disk: <code>${d.exports[0].path.replace(/\.dxf$/, '.{dxf,stl,obj}')}</code></p>`;
+    $('cadGdtTable').innerHTML = `<table><tr><th>Symbol</th><th>Characteristic</th><th>Tolerance</th><th>Datums</th></tr>${d.gdt.frames.map(f =>
+      `<tr><td><b>${f.symbol}</b></td><td>${f.characteristic}</td><td>${f.tolerance}</td><td>${f.datums}</td></tr>`).join('')}</table>` +
+      `<p class="note">${d.gdt.dimensions.map(x => `<b>${x.label}:</b> ${x.value}`).join(' · ')}</p>`;
+    $('cadAltTable').innerHTML = `<table><tr><th>Rank</th><th>Struts / Rings</th><th>Wall (mm)</th><th>Elliptic k</th><th>Gen Score</th></tr>` +
+      [rec, ...d.alternatives].map((a, i) => `<tr><td>${i === 0 ? '★ Top' : '#' + (i + 1)}</td><td>${a.n_struts} / ${a.n_rings}</td><td>${a.wall_mm}</td><td>${a.elliptic_k}</td><td>${(a.gen_score * 100).toFixed(1)}</td></tr>`).join('') + `</table>`;
+    drawCad();
+  } catch (err) { if (seq === cadSeq) $('cadErr').textContent = err.message; }
+}
+
+async function initCad() {
+  try {
+    cadDb = await api('/api/cad/database');
+    const sel = $('cadDev');
+    sel.innerHTML = cadDb.devices.map(d => `<option value="${d.id}">${d.category_label} · ${d.name} (Ø${d.diameter_mm}mm)</option>`).join('');
+    sel.addEventListener('change', () => {
+      const dev = cadDb.devices.find(x => x.id === sel.value);
+      if (dev) { $('cadD').value = dev.diameter_mm; $('cadL').value = dev.length_mm; }
+      loadCad();
+    });
+    $('cadDbTable').innerHTML = `<table><tr><th>Category</th><th>Device</th><th>Material</th><th>Nominal Ø × L</th></tr>${cadDb.devices.map(d =>
+      `<tr><td>${d.category_label}</td><td>${d.name}</td><td>${d.material}</td><td>${d.diameter_mm} × ${d.length_mm} mm</td></tr>`).join('')}</table>`;
+    ['cadD', 'cadL', 'cadS'].forEach(id => $(id).addEventListener('input', debounce(loadCad, 180)));
+    document.querySelectorAll('#cadPrio button').forEach(b => b.addEventListener('click', () => {
+      cadPrio = b.dataset.p;
+      document.querySelectorAll('#cadPrio button').forEach(x => x.classList.toggle('on', x === b));
+      loadCad();
+    }));
+    $('cadRun').addEventListener('click', loadCad);
+    const cv3 = $('cad3dCanvas');
+    cv3.addEventListener('pointerdown', e => { cadDrag = { x: e.clientX, y: e.clientY }; cv3.style.cursor = 'grabbing'; });
+    addEventListener('pointerup', () => { cadDrag = null; if (cv3) cv3.style.cursor = 'grab'; });
+    addEventListener('pointermove', e => {
+      if (!cadDrag) return;
+      cadRotY += (e.clientX - cadDrag.x) * 0.01;
+      cadRotX += (e.clientY - cadDrag.y) * 0.01;
+      cadDrag = { x: e.clientX, y: e.clientY };
+      drawCad3d();
+    });
+    loadCad();
+  } catch (err) { $('cadErr').textContent = err.message; }
 }
 
 /* ================================================================== overview */

@@ -19,6 +19,7 @@ import numpy as np
 from flask import Flask, jsonify, request, send_file, send_from_directory
 
 import bem
+import cad_engine
 import economics
 import ehr
 import elliptic
@@ -248,6 +249,40 @@ def api_qml():
     gamma = round(num(payload, "gamma", 0.25, 0.0, 1.5), 3)
     res = _qml_cached(proc, age, comorb, burden, opt, delay, gamma)
     return jsonify({"success": True, **res})
+
+
+# --------------------------------------------------------------- CAD & GD&T
+
+@app.route("/api/cad/database")
+def api_cad_database():
+    return jsonify({"success": True, **cad_engine.list_database()})
+
+
+@app.route("/api/cad/recommend", methods=["POST", "GET"])
+def api_cad_recommend():
+    payload = request.get_json(silent=True) or {}
+    device_id = str(payload.get("device_id", "coronary_des"))
+    if device_id not in cad_engine.DEVICE_DB:
+        raise ValueError(f"device_id must be one of {list(cad_engine.DEVICE_DB)}")
+    default_d = float(cad_engine.DEVICE_DB[device_id]["diameter_mm"])
+    default_l = float(cad_engine.DEVICE_DB[device_id]["length_mm"])
+    diam = round(num(payload, "target_diameter_mm", default_d, 1.0, 40.0), 3)
+    length = round(num(payload, "target_length_mm", default_l, 5.0, 80.0), 3)
+    stiff = round(num(payload, "stiffness_factor", 0.5, 0.0, 1.0), 3)
+    priority = str(payload.get("priority", "balanced"))
+    if priority not in {"balanced", "high_radial", "low_metal"}:
+        raise ValueError("priority must be balanced, high_radial, or low_metal")
+    res = cad_engine.generate_and_export_cad(device_id, diam, length, stiff, priority)
+    return jsonify({"success": True, **res})
+
+
+@app.route("/api/cad/download/<filename>")
+def api_cad_download(filename: str):
+    safe_name = Path(filename).name
+    target = (cad_engine.EXPORT_DIR / safe_name).resolve()
+    if target.parent != cad_engine.EXPORT_DIR.resolve() or not target.exists() or target.suffix.lower() not in {".dxf", ".stl", ".obj"}:
+        raise ValueError("CAD file not found")
+    return send_file(target, as_attachment=True, download_name=safe_name)
 
 
 # --------------------------------------------------------------------- economics

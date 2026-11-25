@@ -12,7 +12,7 @@
   <canvas id="bgfx" aria-hidden="true"></canvas>
   <header class="top">
     <div class="top-inner">
-      <div class="brand"><div class="logo">∂Ω</div><div>SURGICAL SIMULATION STUDIO<small>BEM · FEM · ELLIPTIC MODULI · EHR · QML · ECONOMICS</small></div></div>
+      <div class="brand"><div class="logo">∂Ω</div><div>SURGICAL SIMULATION STUDIO<small>BEM · FEM · ELLIPTIC MODULI · EHR · QML · CAD GD&amp;T · ECONOMICS</small></div></div>
       <nav class="tabs" id="tabs">
         <button data-tab="overview" class="active">Overview</button>
         <button data-tab="gi">GI Surgery · BEM</button>
@@ -20,6 +20,7 @@
         <button data-tab="elliptic">Elliptic Moduli</button>
         <button data-tab="ehr">EHR Heuristics</button>
         <button data-tab="qml">Clinical Trajectories · QML</button>
+        <button data-tab="cad">CAD · GD&amp;T</button>
         <button data-tab="econ">Health Economics</button>
         <button data-tab="paper">Preprint</button>
       </nav>
@@ -225,6 +226,69 @@
       <div class="grid g2" style="margin-top:18px">
         <div class="card"><h3>Patient characteristics &amp; archetype match</h3><div id="qmlChars" class="note">loading…</div></div>
         <div class="card"><h3>Finite-mathematics QML formulation</h3><div class="eq">|ψ(x)⟩ = ⊗<sub>m=1..6</sub> (cos(πx<sub>m</sub>/2)|0⟩ + sin(πx<sub>m</sub>/2)|1⟩)<br>K<sub>Q</sub>(x,z;γ) = ∏<sub>m</sub> cos²(π(x<sub>m</sub>−z<sub>m</sub>)/2) · exp(−γ Σ sin²(π(x<sub>m</sub>x<sub>m+1</sub>−z<sub>m</sub>z<sub>m+1</sub>)/2))<br>P<sub>Q</sub>(recov | x,t) = Σ<sub>i</sub> w<sub>i</sub>(t) K<sub>Q</sub>(x, x<sub>i</sub>),  h(t|x) = h<sub>0</sub>(t)(1+βJ)(1−0.35 P<sub>Q</sub>)</div><p class="note">The Gram matrix G<sub>ij</sub> = K<sub>Q</sub>(x<sub>i</sub>, x<sub>j</sub>) is verified positive semidefinite (λ<sub>min</sub> ≥ 0) on the synthetic training cohort.</p></div>
+      </div>
+    </section>
+
+    <!-- CAD & GD&T -->
+    <section class="panel" id="tab-cad">
+      <h2>Generative AI CAD synthesis · GD&amp;T engineering drawings &amp; instrumentation DB</h2>
+      <p class="lede">Latent-manifold generative recommendation engine for cardiovascular stents, GI instrumentation, and electrocautery electrodes. Synthesizes ASME Y14.5 GD&amp;T orthographic blueprints, 3D meshes, and writes .DXF, .STL, and .OBJ files to disk.</p>
+      <div class="notice">Parametric CAD &amp; GD&amp;T teaching models stored under <code>cad_exports/</code>. Not cleared for clinical manufacturing.</div>
+      <div class="grid g-main" style="margin-top:16px">
+        <div class="card">
+          <h3>2D orthographic GD&amp;T engineering drawing (ASME Y14.5)</h3>
+          <canvas id="cadGdtCanvas" width="960" height="480" style="height:400px"></canvas>
+          <div class="legend"><span><i style="background:#22d3ee"></i>Part profile &amp; section</span><span><i style="background:#fbbf24"></i>GD&amp;T datums (A, B, C)</span><span><i style="background:#34d399"></i>Dimension callouts</span></div>
+        </div>
+        <div class="grid" style="align-content:start">
+          <div class="card">
+            <h3>Device database &amp; generative AI controls</h3>
+            <div class="controls">
+              <div class="ctl"><label>Device / Instrument</label><select id="cadDev" style="width:100%;padding:7px 10px;border-radius:8px;background:#0c1428;color:#e8eeff;border:1px solid rgba(255,255,255,.16)"></select></div>
+              <div class="ctl"><label>Target diameter / OD (mm) <b id="cadDV"></b></label><input type="range" id="cadD" min="1.5" max="32.0" step="0.1" value="3.2"></div>
+              <div class="ctl"><label>Working / lesion length (mm) <b id="cadLV"></b></label><input type="range" id="cadL" min="8.0" max="50.0" step="1.0" value="20.0"></div>
+              <div class="ctl"><label>Plaque / tissue stiffness <b id="cadSV"></b></label><input type="range" id="cadS" min="0.0" max="1.0" step="0.05" value="0.50"></div>
+            </div>
+            <div class="row">
+              <div class="seg" id="cadPrio">
+                <button data-p="balanced" class="on">Balanced</button>
+                <button data-p="high_radial">High radial / grip</button>
+                <button data-p="low_metal">Low metal / mass</button>
+              </div>
+              <button class="btn" id="cadRun">⚡ Synthesize &amp; Export</button>
+            </div>
+            <div class="err" id="cadErr"></div>
+          </div>
+          <div class="grid g2">
+            <div class="tile cyan"><div class="k">GEN-AI SCORE / CONF</div><div class="v" id="cadScore">—</div><div class="s" id="cadScoreS">—</div></div>
+            <div class="tile green"><div class="k">3D MESH COMPLEXITY</div><div class="v" id="cadMesh">—</div><div class="s" id="cadMeshS">—</div></div>
+          </div>
+          <div class="card">
+            <h3>Stored CAD files on disk (.DXF / .STL / .OBJ)</h3>
+            <div id="cadExports" class="note">Synthesize a device to write .dxf, .stl, and .obj files to disk.</div>
+          </div>
+        </div>
+      </div>
+      <div class="grid g2" style="margin-top:18px">
+        <div class="card">
+          <h3>Interactive 3D CAD mesh viewport (drag to orbit)</h3>
+          <canvas id="cad3dCanvas" width="900" height="420" style="height:340px;cursor:grab"></canvas>
+          <div class="legend"><span><i style="background:#22d3ee"></i>3D Faceted Mesh</span><span>Drag to rotate · Auto-orbit</span></div>
+        </div>
+        <div class="card">
+          <h3>GD&amp;T feature control frames &amp; tolerances</h3>
+          <div id="cadGdtTable" class="note">loading…</div>
+        </div>
+      </div>
+      <div class="grid g2" style="margin-top:18px">
+        <div class="card">
+          <h3>Generative AI ranked design alternatives</h3>
+          <div id="cadAltTable" class="note">loading…</div>
+        </div>
+        <div class="card">
+          <h3>GI instrumentation, electrocautery &amp; stent database</h3>
+          <div id="cadDbTable" class="note" style="overflow-x:auto">loading…</div>
+        </div>
       </div>
     </section>
 
